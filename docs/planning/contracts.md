@@ -58,7 +58,7 @@ class MemoryResult:
 
 class MemoryProvider(Protocol):
     """Contract for plugins that provide memory storage."""
-    
+
     def capture(
         self,
         category: str,           # e.g., "sessions", "learnings", "incidents"
@@ -67,11 +67,11 @@ class MemoryProvider(Protocol):
     ) -> str:
         """
         Store content in the specified category.
-        
+
         Returns: Path to the stored file.
         """
         ...
-    
+
     def query(
         self,
         category: str,           # Category to search
@@ -80,11 +80,11 @@ class MemoryProvider(Protocol):
     ) -> list[MemoryResult]:
         """Search stored content."""
         ...
-    
+
     def list_categories(self) -> list[str]:
         """Return available memory categories."""
         ...
-    
+
     def get_recent(
         self,
         category: str,
@@ -116,16 +116,16 @@ pub trait MemoryProvider {
         content: &str,
         metadata: HashMap<String, serde_json::Value>,
     ) -> Result<String, MemoryError>;
-    
+
     fn query(
         &self,
         category: &str,
         query: &str,
         limit: usize,
     ) -> Result<Vec<MemoryResult>, MemoryError>;
-    
+
     fn list_categories(&self) -> Vec<String>;
-    
+
     fn get_recent(
         &self,
         category: &str,
@@ -160,11 +160,11 @@ class HookResult:
 
 class HookHandler(Protocol):
     """Contract for plugins that handle Claude Code events."""
-    
+
     def handles_event(self, event_type: str) -> bool:
         """Return True if this handler processes the given event type."""
         ...
-    
+
     def handle(
         self,
         event_type: str,         # "PreToolUse", "Stop", "SessionStart", etc.
@@ -172,7 +172,7 @@ class HookHandler(Protocol):
     ) -> HookResult:
         """
         Process a hook event.
-        
+
         Returns: HookResult indicating action to take.
         """
         ...
@@ -199,7 +199,7 @@ pub struct HookResult {
 
 pub trait HookHandler {
     fn handles_event(&self, event_type: &str) -> bool;
-    
+
     fn handle(
         &self,
         event_type: &str,
@@ -222,22 +222,22 @@ from pathlib import Path
 
 class SkillProvider(Protocol):
     """Contract for plugins that provide Claude Code skills."""
-    
+
     def skill_name(self) -> str:
         """Return the skill name (matches SKILL.md name field)."""
         ...
-    
+
     def skill_path(self) -> Path:
         """Return path to SKILL.md file."""
         ...
-    
+
     def match_intent(self, intent: str) -> float:
         """
         Return confidence (0.0-1.0) that this skill matches the intent.
         Used for routing when multiple skills might apply.
         """
         ...
-    
+
     def execute(
         self,
         action: str,             # Specific action within the skill
@@ -263,19 +263,19 @@ from typing import Protocol, Any
 
 class IntegrationProvider(Protocol):
     """Contract for plugins that integrate with external services."""
-    
+
     def service_name(self) -> str:
         """Return the service name (e.g., 'jira', 'slack', 'pagerduty')."""
         ...
-    
+
     def is_configured(self) -> bool:
         """Return True if the integration has valid configuration."""
         ...
-    
+
     def health_check(self) -> bool:
         """Return True if the service is reachable and authenticated."""
         ...
-    
+
     def execute(
         self,
         action: str,             # e.g., "create_ticket", "send_message"
@@ -286,7 +286,7 @@ class IntegrationProvider(Protocol):
         Returns result dict with 'success' and 'data' keys.
         """
         ...
-    
+
     def list_actions(self) -> list[str]:
         """Return list of supported actions."""
         ...
@@ -313,7 +313,7 @@ class NotificationLevel(Enum):
 
 class NotificationProvider(Protocol):
     """Contract for plugins that send notifications."""
-    
+
     def notify(
         self,
         message: str,
@@ -325,7 +325,7 @@ class NotificationProvider(Protocol):
         Returns True if notification was delivered.
         """
         ...
-    
+
     def supports_rich(self) -> bool:
         """Return True if rich formatting (markdown, etc.) is supported."""
         ...
@@ -390,7 +390,7 @@ def load_plugins(plugin_dir: Path) -> dict[str, Plugin]:
     for plugin_path in plugin_dir.iterdir():
         if (plugin_path / "plugin.toml").exists():
             manifests[plugin_path.name] = load_manifest(plugin_path)
-    
+
     # Phase 2: Build provider map
     providers = {}  # contract -> plugin_name
     for name, manifest in manifests.items():
@@ -398,26 +398,26 @@ def load_plugins(plugin_dir: Path) -> dict[str, Plugin]:
             if contract_name in providers:
                 raise ContractConflict(f"{contract_name} provided by multiple plugins")
             providers[contract_name] = name
-    
+
     # Phase 3: Check required contracts
     for name, manifest in manifests.items():
         for alias, spec in manifest.consumes.items():
             if not spec.optional and spec.contract not in providers:
                 raise MissingContract(f"{name} requires {spec.contract}")
-    
+
     # Phase 4: Load plugins in dependency order
     loaded = {}
     for name in topological_sort(manifests, providers):
         plugin = load_plugin(manifests[name])
         loaded[name] = plugin
-    
+
     # Phase 5: Wire consumers to providers
     for name, plugin in loaded.items():
         for alias, spec in manifests[name].consumes.items():
             if spec.contract in providers:
                 provider_plugin = loaded[providers[spec.contract]]
                 plugin.wire_contract(alias, provider_plugin)
-    
+
     return loaded
 ```
 
@@ -428,14 +428,14 @@ Plugins access contracts through a registry:
 ```python
 class PluginContext:
     """Provided to each plugin at initialization."""
-    
+
     def __init__(self, contracts: dict[str, Any]):
         self._contracts = contracts
-    
+
     def get_contract(self, alias: str) -> Any | None:
         """Get a consumed contract by alias. Returns None if not available."""
         return self._contracts.get(alias)
-    
+
     def has_contract(self, alias: str) -> bool:
         """Check if a contract is available."""
         return alias in self._contracts
@@ -446,21 +446,21 @@ class IncidentPlugin:
     def __init__(self, context: PluginContext, config: dict):
         self.context = context
         self.config = config
-        
+
         # Check for optional contracts
         self.memory = context.get_contract("memory")
         self.pagerduty = context.get_contract("pagerduty")
         self.slack = context.get_contract("slack")
-    
+
     def handle_incident(self, incident_id: str):
         # Use contracts if available
         if self.pagerduty:
             incident = self.pagerduty.execute("get_incident", {"id": incident_id})
-        
+
         # Store in memory if available
         if self.memory:
             self.memory.capture("incidents", str(incident), {"id": incident_id})
-        
+
         # Notify if available
         if self.slack:
             self.slack.execute("send_message", {

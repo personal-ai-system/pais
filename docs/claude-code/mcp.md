@@ -640,8 +640,8 @@ If you've already configured MCP servers in Claude Desktop, you can import them:
 <Steps>
   <Step title="Import servers from Claude Desktop">
     ```bash  theme={null}
-    # Basic syntax 
-    claude mcp add-from-claude-desktop 
+    # Basic syntax
+    claude mcp add-from-claude-desktop
     ```
   </Step>
 
@@ -651,7 +651,7 @@ If you've already configured MCP servers in Claude Desktop, you can import them:
 
   <Step title="Verify the servers were imported">
     ```bash  theme={null}
-    claude mcp list 
+    claude mcp list
     ```
   </Step>
 </Steps>

@@ -64,25 +64,25 @@ class MySkillPlugin(Plugin):
     def __init__(self, context: PluginContext, config: dict):
         self.context = context
         self.config = config
-        
+
         # Access optional contracts
         self.memory = context.get_contract("memory")
-    
+
     def skill_name(self) -> str:
         return "my-skill"
-    
+
     def match_intent(self, intent: str) -> float:
         keywords = ["my-skill", "do x", "thing"]
         return 0.9 if any(k in intent.lower() for k in keywords) else 0.0
-    
+
     def execute(self, action: str, context: dict) -> dict:
         # Your skill logic here
         result = f"Executed {action} with {context}"
-        
+
         # Store in memory if available
         if self.memory:
             self.memory.capture("sessions", result, {"action": action})
-        
+
         return {"success": True, "result": result}
 
 # Required: export the plugin class
@@ -309,19 +309,19 @@ from pathlib import Path
 
 class PluginContext:
     """Provided to plugins at initialization."""
-    
+
     def get_contract(self, alias: str) -> Any | None:
         """Get a consumed contract by alias."""
         ...
-    
+
     def has_contract(self, alias: str) -> bool:
         """Check if a contract is available."""
         ...
-    
+
     def get_config(self, key: str, default: Any = None) -> Any:
         """Get a configuration value."""
         ...
-    
+
     def plugin_dir(self) -> Path:
         """Get the plugin's installation directory."""
         ...
@@ -329,7 +329,7 @@ class PluginContext:
 
 class Plugin(ABC):
     """Base class for all plugins."""
-    
+
     @abstractmethod
     def __init__(self, context: PluginContext, config: dict):
         """Initialize with context and configuration."""
@@ -351,29 +351,29 @@ class HistoryPlugin(Plugin):
         self.history_dir = Path(config.get("history_dir", "~/.config/paii/history")).expanduser()
         self.categories = config.get("categories", ["sessions", "learnings"])
         self._ensure_dirs()
-    
+
     def capture(self, category: str, content: str, metadata: dict) -> str:
         now = datetime.now()
         year_month = now.strftime("%Y-%m")
         timestamp = now.strftime("%Y%m%dT%H%M%S")
-        
+
         output_dir = self.history_dir / category / year_month
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         filename = f"{timestamp}_{metadata.get('type', 'entry')}.md"
         filepath = output_dir / filename
-        
+
         doc = f"---\n{yaml.dump(metadata)}---\n\n{content}"
         filepath.write_text(doc)
-        
+
         return str(filepath)
-    
+
     def query(self, category: str, query: str, limit: int = 10) -> list:
         import subprocess
         category_dir = self.history_dir / category
         if not category_dir.exists():
             return []
-        
+
         result = subprocess.run(
             ["rg", "-l", query, str(category_dir)],
             capture_output=True, text=True
@@ -403,23 +403,23 @@ class SecurityPlugin(Plugin):
         (r"rm\s+(-rf?|--recursive)\s+[/~]", "Catastrophic deletion"),
         (r"curl.*\|\s*(ba)?sh", "Remote code execution"),
     ]
-    
+
     def handles_event(self, event_type: str) -> bool:
         return event_type == "PreToolUse"
-    
+
     def handle(self, event_type: str, payload: dict) -> HookResult:
         if payload.get("tool_name") != "Bash":
             return HookResult(HookAction.ALLOW)
-        
+
         command = payload.get("tool_input", {}).get("command", "")
-        
+
         for pattern, description in self.DANGEROUS_PATTERNS:
             if re.search(pattern, command, re.IGNORECASE):
                 return HookResult(
                     HookAction.BLOCK,
                     f"🚨 BLOCKED: {description}"
                 )
-        
+
         return HookResult(HookAction.ALLOW)
 ```
 
@@ -435,25 +435,25 @@ class JiraPlugin(Plugin):
             server=config["url"],
             basic_auth=(config["user"], config["token"])
         )
-    
+
     def service_name(self) -> str:
         return "jira"
-    
+
     def is_configured(self) -> bool:
         return self.client is not None
-    
+
     def health_check(self) -> bool:
         try:
             self.client.myself()
             return True
         except:
             return False
-    
+
     def execute(self, action: str, params: dict) -> dict:
         if action == "get_issue":
             issue = self.client.issue(params["id"])
             return {"success": True, "data": {"key": issue.key, "summary": issue.fields.summary}}
-        
+
         if action == "create_issue":
             issue = self.client.create_issue(
                 project=params["project"],
@@ -461,9 +461,9 @@ class JiraPlugin(Plugin):
                 issuetype={"name": params.get("type", "Task")}
             )
             return {"success": True, "data": {"key": issue.key}}
-        
+
         return {"success": False, "error": f"Unknown action: {action}"}
-    
+
     def list_actions(self) -> list[str]:
         return ["get_issue", "create_issue", "update_issue", "search"]
 ```
@@ -532,16 +532,16 @@ pub fn handle_pre_tool_use(payload: &str) -> HookResult {
         Ok(p) => p,
         Err(_) => return HookResult { action: 0, message: None },
     };
-    
+
     if payload.tool_name != "Bash" {
         return HookResult { action: 0, message: None };
     }
-    
+
     let command = payload.tool_input
         .get("command")
         .and_then(|v| v.as_str())
         .unwrap_or("");
-    
+
     // Check dangerous patterns
     if command.contains("rm -rf /") || command.contains("rm -rf ~") {
         return HookResult {
@@ -549,7 +549,7 @@ pub fn handle_pre_tool_use(payload: &str) -> HookResult {
             message: Some("🚨 BLOCKED: Catastrophic deletion".to_string()),
         };
     }
-    
+
     HookResult { action: 0, message: None }
 }
 
@@ -662,22 +662,22 @@ from src.plugin import MyPlugin, PluginContext
 class MockContext:
     def __init__(self):
         self._contracts = {}
-    
+
     def get_contract(self, alias):
         return self._contracts.get(alias)
 
 def test_plugin_initialization():
     context = MockContext()
     config = {"setting": "value"}
-    
+
     plugin = MyPlugin(context, config)
-    
+
     assert plugin.skill_name() == "my-skill"
 
 def test_match_intent():
     context = MockContext()
     plugin = MyPlugin(context, {})
-    
+
     assert plugin.match_intent("help me do x") > 0.5
     assert plugin.match_intent("random text") < 0.3
 ```

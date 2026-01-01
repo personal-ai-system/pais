@@ -43,21 +43,21 @@ Claude (using incident skill):
   PagerDuty: Acknowledged incident #12345 ✓
   Slack: Created #inc-payments-api-500s, invited on-call team ✓
   Jira: Created INC-789 (linked to PagerDuty) ✓
-  
+
   📊 SIMILAR INCIDENTS (from history):
-  
+
   1. INC-456 (2 weeks ago) - payments-api-timeout
      Root cause: Database connection pool exhaustion
      Resolution: Increased pool size from 50 to 100
-     
+
   2. INC-234 (1 month ago) - payments-api-errors
      Root cause: Redis cache expired
      Resolution: Extended TTL on critical keys
-  
+
   📋 SUGGESTED RUNBOOK: payments-api-health-check.md
-  
+
   Ready for guided troubleshooting?
-  
+
   Similar incident INC-456 was caused by connection pool exhaustion.
   Should I check database connections first?
 
@@ -65,14 +65,14 @@ You: "yes, check database"
 
 Claude:
   Running: kubectl exec -it payments-api-pod -- python manage.py dbstats
-  
+
   📊 Database Connection Status:
     Active connections: 98/100
     Waiting queries: 47
-    
+
   ⚠️ Connection pool nearly exhausted (98% usage)
   This matches the pattern from INC-456.
-  
+
   Recommended action: Scale database pool or restart pods.
   Should I proceed?
 ```
@@ -193,7 +193,7 @@ PRE-FLIGHT CHECKS:
   ✓ Disk space: 45% used (OK)
   ✓ Active connections: 234 (will be migrated)
   ⚠️ Maintenance window: Not currently in window
-  
+
 Proceed with failover? (This will require approval for step 5 and step 9)
 
 You: "yes, proceed"
@@ -265,9 +265,9 @@ Capacity: 5 engineers, 40 story points
 
 PROGRESS:
   ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75% complete (30/40 points)
-  
+
   Completed: 12 tickets
-  In Progress: 5 tickets  
+  In Progress: 5 tickets
   Remaining: 3 tickets
 
 BY EPIC:
@@ -275,11 +275,11 @@ BY EPIC:
   Database Migration (INFRA-100)
     ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ 100% (16/16 points)
     All tickets complete ✓
-    
+
   Kubernetes Upgrade (INFRA-101)
     ▓▓▓▓▓▓▓▓▓▓░░░░░░ 60% (9/15 points)
     Blocked: Waiting for security review
-    
+
   Monitoring Improvements (INFRA-102)
     ▓▓▓▓▓▓▓░░░░░░░░░ 55% (5/9 points)
     On track
@@ -290,11 +290,11 @@ BLOCKERS:
      Waiting on: Security team
      Days blocked: 3
      Escalated: No
-     
+
 RISKS:
 
   - Kubernetes upgrade may slip if security review not completed by EOD Friday
-  
+
 RECOMMENDATION:
 
   Sprint is at risk. Suggest escalating security review to unblock K8s work.
@@ -334,7 +334,7 @@ KEY DISCUSSIONS:
    - Status: Open for feedback until Friday
    - Key concerns: Rollback time, canary percentage
    - Document: https://docs.company.com/rfc-042
-   
+
 3. 💬 General Discussion: On-call rotation changes
    - Proposal: Switch to 1-week rotations
    - Sentiment: Mixed (5 in favor, 3 against)
@@ -344,7 +344,7 @@ MENTIONS OF YOU:
 
   @scott mentioned by @alice at 10:45:
   "Can you review the cache fix when you're free?"
-  
+
   @scott mentioned by @frank at 13:22:
   "Need your approval on the infra budget PR"
 
@@ -408,7 +408,7 @@ You: "Si, una agua con gas, por favor."
 
 Claude:
 
-✓ Good! 
+✓ Good!
 
 FEEDBACK:
 - In Spanish, "agua" uses "un" despite being feminine: "un agua con gas"
@@ -520,16 +520,16 @@ PATTERNS IDENTIFIED:
    - You frequently ask about "similar incidents"
    - Current: Manual search through history
    - Suggestion: Create "incident-similarity" plugin with ML-based matching
-   
+
 2. Missing Integration
    - 12 mentions of "Datadog" with no plugin installed
    - You're manually checking dashboards
    - Suggestion: Install or create Datadog integration plugin
-   
+
 3. Workflow Friction
    - Post-incident, you often manually create post-mortem docs
    - Suggestion: Add auto-postmortem workflow to incident plugin
-   
+
 4. Unused Capabilities
    - `runbook` plugin supports dry-run mode
    - You've never used it

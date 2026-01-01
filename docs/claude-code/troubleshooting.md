@@ -191,7 +191,7 @@ If Claude Code seems unresponsive:
 If Search tool, `@file` mentions, custom agents, and custom slash commands aren't working, install system `ripgrep`:
 
 ```bash  theme={null}
-# macOS (Homebrew)  
+# macOS (Homebrew)
 brew install ripgrep
 
 # Windows (winget)

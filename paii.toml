@@ -1,0 +1,22 @@
+# PAII Configuration
+# This file configures the Personal AI Infrastructure system.
+
+[paii]
+version = "0.1.0"
+
+[paths]
+plugins = "~/.config/paii/plugins"
+history = "~/.config/paii/history"
+registries = "~/.config/paii/registries"
+
+[defaults]
+language = "python"
+log_level = "info"
+
+[registries]
+core = "https://github.com/scottidler/paii/registry/plugins.toml"
+
+[hooks]
+security_enabled = true
+history_enabled = true
+

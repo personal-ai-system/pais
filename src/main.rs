@@ -1,0 +1,74 @@
+use clap::Parser;
+use eyre::{Context, Result};
+use log::info;
+use std::fs;
+use std::path::PathBuf;
+
+mod cli;
+mod commands;
+mod config;
+mod contract;
+mod hook;
+mod plugin;
+
+use cli::{Cli, Commands};
+use config::Config;
+
+fn setup_logging() -> Result<()> {
+    // Create log directory
+    let log_dir = dirs::data_local_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("paii")
+        .join("logs");
+
+    fs::create_dir_all(&log_dir).context("Failed to create log directory")?;
+
+    let log_file = log_dir.join("paii.log");
+
+    // Setup env_logger with file output
+    let target = Box::new(
+        fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_file)
+            .context("Failed to open log file")?,
+    );
+
+    env_logger::Builder::from_default_env()
+        .target(env_logger::Target::Pipe(target))
+        .init();
+
+    info!("Logging initialized, writing to: {}", log_file.display());
+    Ok(())
+}
+
+fn run(cli: Cli, config: Config) -> Result<()> {
+    match cli.command {
+        Commands::Plugin { action } => commands::plugin::run(action, &config),
+        Commands::Hook { action } => commands::hook::run(action, &config),
+        Commands::History { action } => commands::history::run(action, &config),
+        Commands::Config { action } => commands::config::run(action, &config),
+        Commands::Registry { action } => commands::registry::run(action, &config),
+        Commands::Run { plugin, action, args } => commands::run::run(&plugin, &action, &args, &config),
+        Commands::Status { json } => commands::status::run(json, &config),
+        Commands::Completions { shell } => commands::completions::run(shell),
+    }
+}
+
+fn main() -> Result<()> {
+    // Setup logging first
+    setup_logging().context("Failed to setup logging")?;
+
+    // Parse CLI arguments
+    let cli = Cli::parse();
+
+    // Load configuration
+    let config = Config::load(cli.config.as_ref()).context("Failed to load configuration")?;
+
+    info!("Starting paii with config from: {:?}", cli.config);
+
+    // Run the command
+    run(cli, config).context("Command failed")?;
+
+    Ok(())
+}

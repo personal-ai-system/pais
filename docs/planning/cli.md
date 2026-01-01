@@ -51,14 +51,14 @@ Installed plugins:
 
   hooks (1.0.0)         [rust]    Foundation: hook handling
     provides: HookHandler
-    
+
   history (1.0.0)       [python]  File-based memory system
     provides: MemoryProvider
     consumes: HookHandler (optional)
-    
+
   jira (0.5.0)          [python]  Jira integration
     provides: IntegrationProvider[jira]
-    
+
   incident (1.0.0)      [python]  Incident response workflows
     provides: SkillProvider[incident]
     consumes: MemoryProvider, IntegrationProvider[pagerduty, slack] (optional)
