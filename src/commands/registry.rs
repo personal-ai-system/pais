@@ -1,9 +1,48 @@
 use colored::*;
 use eyre::{Context, Result};
+use serde::Deserialize;
 use std::fs;
 
 use crate::cli::RegistryAction;
 use crate::config::Config;
+
+/// Parsed registry file
+#[derive(Debug, Deserialize)]
+struct RegistryFile {
+    #[allow(dead_code)]
+    registry: RegistryMeta,
+    #[serde(default)]
+    plugins: Vec<PluginEntry>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+struct RegistryMeta {
+    name: String,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    version: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct PluginEntry {
+    name: String,
+    #[serde(default)]
+    version: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    source: Option<String>,
+    #[serde(default)]
+    path: Option<String>,
+    #[serde(default)]
+    language: Option<String>,
+    #[serde(default)]
+    r#type: Option<String>,
+    #[serde(default)]
+    tags: Vec<String>,
+}
 
 pub fn run(action: RegistryAction, config: &Config) -> Result<()> {
     match action {
@@ -11,6 +50,7 @@ pub fn run(action: RegistryAction, config: &Config) -> Result<()> {
         RegistryAction::Add { name, url } => add(&name, &url, config),
         RegistryAction::Remove { name } => remove(&name, config),
         RegistryAction::Update { name } => update(name.as_deref(), config),
+        RegistryAction::Search { query, json } => search(&query, json, config),
     }
 }
 
@@ -167,4 +207,109 @@ fn fetch_remote_registry(url: &str) -> Result<String> {
         .context("Failed to read response body")?;
 
     Ok(body)
+}
+
+/// Search result containing plugin and its source registry
+#[derive(Debug)]
+struct SearchResult {
+    registry: String,
+    plugin: PluginEntry,
+}
+
+fn search(query: &str, json: bool, config: &Config) -> Result<()> {
+    let registries_dir = Config::expand_path(&config.paths.registries);
+    let query_lower = query.to_lowercase();
+
+    let mut results: Vec<SearchResult> = Vec::new();
+
+    // Iterate through all cached registry files
+    if registries_dir.exists() {
+        for entry in fs::read_dir(&registries_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.extension().is_some_and(|e| e == "toml") {
+                let registry_name = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
+                let content = fs::read_to_string(&path).context("Failed to read registry file")?;
+                let registry: RegistryFile = toml::from_str(&content).context("Failed to parse registry file")?;
+
+                // Search plugins
+                for plugin in registry.plugins {
+                    let matches = plugin.name.to_lowercase().contains(&query_lower)
+                        || plugin
+                            .description
+                            .as_ref()
+                            .is_some_and(|d| d.to_lowercase().contains(&query_lower))
+                        || plugin.tags.iter().any(|t| t.to_lowercase().contains(&query_lower));
+
+                    if matches {
+                        results.push(SearchResult {
+                            registry: registry_name.clone(),
+                            plugin,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    if json {
+        // Output as JSON
+        let json_results: Vec<serde_json::Value> = results
+            .iter()
+            .map(|r| {
+                serde_json::json!({
+                    "registry": r.registry,
+                    "name": r.plugin.name,
+                    "version": r.plugin.version,
+                    "description": r.plugin.description,
+                    "language": r.plugin.language,
+                    "type": r.plugin.r#type,
+                    "tags": r.plugin.tags,
+                    "source": r.plugin.source,
+                    "path": r.plugin.path,
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&json_results)?);
+    } else {
+        // Human-readable output
+        if results.is_empty() {
+            println!("{}", "No plugins found matching query.".dimmed());
+            println!();
+            println!(
+                "Try running {} to update registries first.",
+                "paii registry update".cyan()
+            );
+            return Ok(());
+        }
+
+        println!("{} {} plugin(s) found:\n", "→".blue(), results.len());
+
+        for result in &results {
+            let desc = result.plugin.description.as_deref().unwrap_or("No description");
+            let version = result.plugin.version.as_deref().unwrap_or("?");
+            let lang = result.plugin.language.as_deref().unwrap_or("?");
+
+            println!(
+                "  {} {} ({})",
+                result.plugin.name.cyan().bold(),
+                format!("v{}", version).dimmed(),
+                lang.yellow()
+            );
+            println!("    {}", desc.dimmed());
+            if !result.plugin.tags.is_empty() {
+                println!("    Tags: {}", result.plugin.tags.join(", ").blue());
+            }
+            println!("    Registry: {}", result.registry.dimmed());
+            println!();
+        }
+    }
+
+    Ok(())
 }

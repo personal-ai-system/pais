@@ -263,4 +263,14 @@ pub enum RegistryAction {
         /// Registry name (updates all if omitted)
         name: Option<String>,
     },
+
+    /// Search for plugins in cached registries
+    Search {
+        /// Search query (matches name, description, tags)
+        query: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
