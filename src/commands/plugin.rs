@@ -1,11 +1,43 @@
 use colored::*;
 use eyre::{Context, Result};
+use serde::Deserialize;
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 use crate::cli::PluginAction;
 use crate::config::Config;
 use crate::plugin::loader::load_plugin;
+
+/// Registry plugin entry for lookup
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
+struct RegistryPlugin {
+    name: String,
+    #[serde(default)]
+    version: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    source: Option<String>,
+    #[serde(default)]
+    path: Option<String>,
+}
+
+/// Parsed registry file
+#[derive(Debug, Deserialize)]
+struct RegistryFile {
+    #[allow(dead_code)]
+    registry: RegistryMeta,
+    #[serde(default)]
+    plugins: Vec<RegistryPlugin>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+struct RegistryMeta {
+    name: String,
+}
 
 pub fn run(action: PluginAction, config: &Config) -> Result<()> {
     match action {
@@ -104,14 +136,25 @@ fn install(source: &str, dev: bool, force: bool, config: &Config) -> Result<()> 
 
     let source_path = Path::new(source);
 
-    // Must be a local path for now
-    if !source_path.exists() {
+    // Check if source is a local path or a plugin name from registry
+    if source_path.exists() {
+        // Local path installation
+        install_from_path(source_path, dev, force, config)
+    } else if !source.contains('/') && !source.contains('\\') {
+        // Looks like a plugin name - search registry
+        install_from_registry(source, force, config)
+    } else {
         eyre::bail!(
-            "Source path does not exist: {}. Git/registry installation not yet supported.",
+            "Source not found: {}. Use a local path or a plugin name from registry.\n\
+             Hint: Run 'paii registry search {}' to find available plugins.",
+            source,
             source
         );
     }
+}
 
+/// Install a plugin from a local path
+fn install_from_path(source_path: &Path, dev: bool, force: bool, config: &Config) -> Result<()> {
     // Load and validate the plugin
     let plugin = load_plugin(source_path).context("Failed to load plugin from source")?;
     let plugin_name = &plugin.manifest.plugin.name;
@@ -167,6 +210,104 @@ fn install(source: &str, dev: bool, force: bool, config: &Config) -> Result<()> 
         plugin_name.green(),
         plugin.manifest.plugin.version
     );
+
+    Ok(())
+}
+
+/// Install a plugin from the registry by name
+fn install_from_registry(name: &str, force: bool, config: &Config) -> Result<()> {
+    println!("  {} Searching registries for '{}'...", "→".blue(), name);
+
+    // Search cached registries for the plugin
+    let registries_dir = Config::expand_path(&config.paths.registries);
+
+    if !registries_dir.exists() {
+        eyre::bail!("No cached registries. Run 'paii registry update' first.");
+    }
+
+    let mut found_plugin: Option<(String, RegistryPlugin)> = None;
+
+    for entry in fs::read_dir(&registries_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.extension().is_some_and(|e| e == "toml") {
+            let registry_name = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+
+            let content = fs::read_to_string(&path)?;
+            let registry: RegistryFile =
+                toml::from_str(&content).context(format!("Failed to parse registry: {}", registry_name))?;
+
+            for plugin in registry.plugins {
+                if plugin.name == name {
+                    found_plugin = Some((registry_name, plugin));
+                    break;
+                }
+            }
+
+            if found_plugin.is_some() {
+                break;
+            }
+        }
+    }
+
+    let (registry_name, plugin) = found_plugin.ok_or_else(|| {
+        eyre::eyre!(
+            "Plugin '{}' not found in any registry.\n\
+             Hint: Run 'paii registry search {}' to find similar plugins.",
+            name,
+            name
+        )
+    })?;
+
+    let version = plugin.version.as_deref().unwrap_or("unknown");
+    println!(
+        "  {} Found {} v{} in registry '{}'",
+        "✓".green(),
+        plugin.name.cyan(),
+        version,
+        registry_name.dimmed()
+    );
+
+    // Get source and path
+    let source_url = plugin
+        .source
+        .as_ref()
+        .ok_or_else(|| eyre::eyre!("Plugin '{}' has no source URL in registry", name))?;
+    let plugin_path = plugin.path.as_deref().unwrap_or("");
+
+    // Clone the repository to a temp directory
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+    let clone_path = temp_dir.path().join("repo");
+
+    println!("  {} Cloning {}...", "→".blue(), source_url.dimmed());
+
+    let status = Command::new("git")
+        .args(["clone", "--depth", "1", source_url, clone_path.to_str().unwrap()])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .status()
+        .context("Failed to run git clone")?;
+
+    if !status.success() {
+        eyre::bail!("Git clone failed for: {}", source_url);
+    }
+
+    // Find the plugin within the cloned repo
+    let plugin_source_path = if plugin_path.is_empty() { clone_path } else { clone_path.join(plugin_path) };
+
+    if !plugin_source_path.exists() {
+        eyre::bail!("Plugin path '{}' not found in repository {}", plugin_path, source_url);
+    }
+
+    // Now install from the cloned path (not dev mode for registry installs)
+    install_from_path(&plugin_source_path, false, force, config)?;
+
+    // Temp dir is automatically cleaned up when it goes out of scope
 
     Ok(())
 }
