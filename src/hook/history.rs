@@ -1,13 +1,13 @@
 //! History hook handler
 //!
-//! Captures session summaries on Stop events.
+//! Captures session lifecycle events: SessionStart, Stop, SessionEnd.
 
 use std::path::PathBuf;
 
 use super::{HookEvent, HookHandler, HookResult};
 use crate::history::{HistoryEntry, HistoryStore};
 
-/// History hook handler - captures session data
+/// History hook handler - captures session lifecycle data
 pub struct HistoryHandler {
     enabled: bool,
     history_path: PathBuf,
@@ -18,11 +18,49 @@ impl HistoryHandler {
         Self { enabled, history_path }
     }
 
-    fn capture_session(&self, payload: &serde_json::Value) -> HookResult {
-        // Extract session info from payload
+    fn on_session_start(&self, payload: &serde_json::Value) -> HookResult {
         let session_id = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("unknown");
 
-        // Get the stop reason and any summary
+        let cwd = payload.get("cwd").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+        let is_resumed = payload.get("is_resumed").and_then(|v| v.as_bool()).unwrap_or(false);
+
+        let session_type = if is_resumed { "resumed" } else { "new" };
+
+        // Log session start
+        log::info!(
+            "Session started: {} ({}) in {}",
+            &session_id[..8.min(session_id.len())],
+            session_type,
+            cwd
+        );
+
+        // Create a brief entry for session starts
+        let content = format!(
+            "Session {} in `{}`\n\nType: {}",
+            session_type,
+            cwd,
+            if is_resumed { "Resumed" } else { "New" }
+        );
+
+        let title = format!("Session {} started", &session_id[..8.min(session_id.len())]);
+        let entry = HistoryEntry::new("events", &title, &content)
+            .with_tag("session_start")
+            .with_tag(session_type)
+            .with_metadata("session_id", session_id)
+            .with_metadata("cwd", cwd);
+
+        let store = HistoryStore::new(self.history_path.clone());
+        if let Err(e) = store.store(&entry) {
+            log::error!("Failed to log session start: {}", e);
+        }
+
+        HookResult::Allow
+    }
+
+    fn on_stop(&self, payload: &serde_json::Value) -> HookResult {
+        let session_id = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
         let stop_reason = payload
             .get("stop_reason")
             .and_then(|v| v.as_str())
@@ -37,7 +75,6 @@ impl HistoryHandler {
             .with_tag(stop_reason)
             .with_metadata("session_id", session_id);
 
-        // Store it
         let store = HistoryStore::new(self.history_path.clone());
         match store.store(&entry) {
             Ok(path) => {
@@ -52,16 +89,37 @@ impl HistoryHandler {
             }
         }
     }
+
+    fn on_session_end(&self, payload: &serde_json::Value) -> HookResult {
+        let session_id = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+        log::info!("Session ended: {}", &session_id[..8.min(session_id.len())]);
+
+        // Create an event entry for session end
+        let title = format!("Session {} ended", &session_id[..8.min(session_id.len())]);
+        let entry = HistoryEntry::new("events", &title, "Session completed.")
+            .with_tag("session_end")
+            .with_metadata("session_id", session_id);
+
+        let store = HistoryStore::new(self.history_path.clone());
+        if let Err(e) = store.store(&entry) {
+            log::error!("Failed to log session end: {}", e);
+        }
+
+        HookResult::Allow
+    }
 }
 
 impl HookHandler for HistoryHandler {
     fn handles(&self, event: HookEvent) -> bool {
-        self.enabled && event == HookEvent::Stop
+        self.enabled && matches!(event, HookEvent::SessionStart | HookEvent::Stop | HookEvent::SessionEnd)
     }
 
     fn handle(&self, event: HookEvent, payload: &serde_json::Value) -> HookResult {
         match event {
-            HookEvent::Stop => self.capture_session(payload),
+            HookEvent::SessionStart => self.on_session_start(payload),
+            HookEvent::Stop => self.on_stop(payload),
+            HookEvent::SessionEnd => self.on_session_end(payload),
             _ => HookResult::Allow,
         }
     }

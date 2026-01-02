@@ -10,7 +10,39 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "paii hook dispatch SessionStart"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "paii hook dispatch Stop"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "paii hook dispatch SessionEnd"
+          }
+        ]
+      }
     ]
   }
 }
-
