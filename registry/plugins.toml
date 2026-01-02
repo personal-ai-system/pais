@@ -71,3 +71,53 @@ language = "rust"
 type = "skill"
 tags = ["git", "github", "productivity", "sre"]
 
+[[plugins]]
+name = "aka"
+version = "0.1.0"
+description = "High-performance shell alias manager with daemon mode"
+source = "https://github.com/scottidler/paii"
+path = "plugins/aka"
+language = "rust"
+type = "skill"
+tags = ["shell", "alias", "productivity"]
+
+[[plugins]]
+name = "cidr"
+version = "0.1.0"
+description = "CIDR calculator with pretty-printed network info"
+source = "https://github.com/scottidler/paii"
+path = "plugins/cidr"
+language = "rust"
+type = "skill"
+tags = ["networking", "cidr", "calculator"]
+
+[[plugins]]
+name = "dashify"
+version = "0.1.0"
+description = "Normalize filenames: lowercase with dashes"
+source = "https://github.com/scottidler/paii"
+path = "plugins/dashify"
+language = "rust"
+type = "skill"
+tags = ["files", "rename", "naming"]
+
+[[plugins]]
+name = "rkvr"
+version = "0.1.0"
+description = "Safe file deletion with archiving and recovery (rmrf/bkup/rcvr)"
+source = "https://github.com/scottidler/paii"
+path = "plugins/rkvr"
+language = "rust"
+type = "skill"
+tags = ["files", "backup", "recovery", "safety"]
+
+[[plugins]]
+name = "whitespace"
+version = "0.1.0"
+description = "Remove trailing whitespace from files in parallel"
+source = "https://github.com/scottidler/paii"
+path = "plugins/whitespace"
+language = "rust"
+type = "skill"
+tags = ["formatting", "lint", "cleanup"]
+

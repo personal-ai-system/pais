@@ -1,0 +1,29 @@
+[plugin]
+name = "cidr"
+version = "0.1.0"
+description = "CIDR calculator with pretty-printed network info"
+authors = ["Scott Idler <scott.a.idler@gmail.com>"]
+language = "rust"
+type = "skill"
+license = "MIT"
+tags = ["networking", "cidr", "ip", "calculator"]
+
+[paii]
+core_version = ">=0.1.0"
+
+[provides]
+
+[consumes]
+
+[config]
+
+[hooks]
+pre_tool_use = false
+post_tool_use = false
+stop = false
+session_start = false
+session_end = false
+
+[build]
+type = "skill"
+

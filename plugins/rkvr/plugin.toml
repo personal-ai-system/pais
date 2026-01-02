@@ -1,0 +1,29 @@
+[plugin]
+name = "rkvr"
+version = "0.1.0"
+description = "Safe file deletion with archiving and recovery (rmrf/bkup/rcvr)"
+authors = ["Scott Idler <scott.a.idler@gmail.com>"]
+language = "rust"
+type = "skill"
+license = "MIT"
+tags = ["files", "backup", "recovery", "safety", "rm"]
+
+[paii]
+core_version = ">=0.1.0"
+
+[provides]
+
+[consumes]
+
+[config]
+
+[hooks]
+pre_tool_use = false
+post_tool_use = false
+stop = false
+session_start = false
+session_end = false
+
+[build]
+type = "skill"
+

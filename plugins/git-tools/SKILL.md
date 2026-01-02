@@ -112,7 +112,7 @@ ls-owners -d                 # Detailed output with paths
 ### Output
 
 - **owned**: All code paths have CODEOWNERS entries
-- **partial**: Some paths are unowned  
+- **partial**: Some paths are unowned
 - **unowned**: Missing or empty CODEOWNERS
 
 Shows top authors (from git history) for unowned repos to suggest owners.
