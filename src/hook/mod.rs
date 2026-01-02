@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod dispatch;
+pub mod history;
 pub mod security;
 
 /// Hook event types

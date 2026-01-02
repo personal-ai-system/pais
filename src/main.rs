@@ -8,6 +8,7 @@ mod cli;
 mod commands;
 mod config;
 mod contract;
+mod history;
 mod hook;
 mod plugin;
 

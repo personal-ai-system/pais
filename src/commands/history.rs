@@ -1,8 +1,10 @@
+use chrono::NaiveDate;
 use colored::*;
-use eyre::Result;
+use eyre::{Context, Result};
 
 use crate::cli::HistoryAction;
 use crate::config::Config;
+use crate::history::HistoryStore;
 
 pub fn run(action: HistoryAction, config: &Config) -> Result<()> {
     match action {
@@ -23,41 +25,71 @@ fn query_history(
     category: Option<&str>,
     limit: usize,
     since: Option<&str>,
-    _json: bool,
+    json: bool,
     config: &Config,
 ) -> Result<()> {
-    println!("{} Searching history for: {}", "🔍".blue(), query.cyan());
-
-    if let Some(cat) = category {
-        println!("  Category: {}", cat);
-    }
-    println!("  Limit: {}", limit);
-    if let Some(date) = since {
-        println!("  Since: {}", date);
-    }
-
     let history_dir = Config::expand_path(&config.paths.history);
-    println!("  History dir: {}", history_dir.display().to_string().dimmed());
+    let store = HistoryStore::new(history_dir);
 
-    // TODO: Implement history search using ripgrep
-    println!("  {} History search not yet implemented", "⚠".yellow());
+    // Parse since date if provided
+    let since_date = since
+        .map(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d"))
+        .transpose()
+        .context("Invalid date format (use YYYY-MM-DD)")?;
+
+    let entries = store.query(query, category, since_date, limit)?;
+
+    if json {
+        let output: Vec<serde_json::Value> = entries
+            .iter()
+            .map(|e| {
+                serde_json::json!({
+                    "id": e.id,
+                    "category": e.category,
+                    "title": e.title,
+                    "created_at": e.created_at.format("%Y-%m-%dT%H:%M:%S%z").to_string(),
+                    "tags": e.tags,
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        println!(
+            "{} Found {} entries matching '{}':",
+            "🔍".blue(),
+            entries.len(),
+            query.cyan()
+        );
+        println!();
+
+        if entries.is_empty() {
+            println!("  {}", "(no matches)".dimmed());
+        } else {
+            for entry in &entries {
+                print_entry_summary(entry);
+            }
+        }
+    }
 
     Ok(())
 }
 
 fn recent(category: Option<&str>, count: usize, config: &Config) -> Result<()> {
-    println!("{} Recent history entries", "📋".blue());
-
-    if let Some(cat) = category {
-        println!("  Category: {}", cat);
-    }
-    println!("  Count: {}", count);
-
     let history_dir = Config::expand_path(&config.paths.history);
-    println!("  History dir: {}", history_dir.display().to_string().dimmed());
+    let store = HistoryStore::new(history_dir);
 
-    // TODO: Implement recent history listing
-    println!("  {} Recent history not yet implemented", "⚠".yellow());
+    let entries = store.recent(category, count)?;
+
+    println!("{} Recent history entries:", "📋".blue());
+    println!();
+
+    if entries.is_empty() {
+        println!("  {}", "(no history yet)".dimmed());
+    } else {
+        for entry in &entries {
+            print_entry_summary(entry);
+        }
+    }
 
     Ok(())
 }
@@ -67,31 +99,27 @@ fn categories(config: &Config) -> Result<()> {
     println!();
 
     let history_dir = Config::expand_path(&config.paths.history);
+    let store = HistoryStore::new(history_dir);
 
-    if !history_dir.exists() {
+    let cats = store.categories()?;
+
+    if cats.is_empty() {
         println!("  {}", "(no history yet)".dimmed());
         return Ok(());
     }
 
-    // List subdirectories as categories
-    for entry in std::fs::read_dir(&history_dir)? {
-        let entry = entry?;
-        if entry.file_type()?.is_dir() {
-            let name = entry.file_name();
-            let name_str = name.to_string_lossy();
-
-            // Count entries in category
-            let count = std::fs::read_dir(entry.path())?
-                .filter_map(|e| e.ok())
-                .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
-                .flat_map(|e| std::fs::read_dir(e.path()))
-                .flatten()
-                .filter_map(|e| e.ok())
-                .count();
-
-            println!("  {:15} ({} entries)", name_str.cyan(), count);
-        }
+    for cat in cats {
+        let count = store.count(&cat)?;
+        println!("  {:15} ({} entries)", cat.cyan(), count);
     }
 
     Ok(())
+}
+
+fn print_entry_summary(entry: &crate::history::HistoryEntry) {
+    let date = entry.created_at.format("%Y-%m-%d %H:%M").to_string();
+    println!("  {} {} {}", entry.category.cyan(), date.dimmed(), entry.title.bold());
+    if !entry.tags.is_empty() {
+        println!("    tags: {}", entry.tags.join(", ").dimmed());
+    }
 }
