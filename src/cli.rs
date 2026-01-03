@@ -138,6 +138,12 @@ pub enum Commands {
         payload: bool,
     },
 
+    /// Manage agent personalities
+    Agent {
+        #[command(subcommand)]
+        action: AgentAction,
+    },
+
     /// Run a plugin action directly
     Run {
         /// Plugin name
@@ -420,6 +426,45 @@ pub enum HistoryAction {
         /// Number of recent dates to show
         #[arg(long, default_value = "10")]
         limit: usize,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum AgentAction {
+    /// List available agents
+    List {
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// Show agent details
+    Show {
+        /// Agent name
+        name: String,
+
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// List available traits
+    Traits {
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// Generate prompt for an agent
+    Prompt {
+        /// Agent name
+        name: String,
+    },
+
+    /// Create a new agent from template
+    Create {
+        /// Agent name
+        name: String,
     },
 }
 

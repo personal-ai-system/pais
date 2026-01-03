@@ -1,14 +1,16 @@
 //! History hook handler
 //!
-//! Captures session lifecycle events: SessionStart, Stop, SessionEnd.
+//! Captures session lifecycle events: SessionStart, Stop, SubagentStop, SessionEnd.
 //!
-//! On Stop, content is analyzed to categorize as:
+//! On Stop/SubagentStop, content is analyzed to categorize as:
+//! - Agent's `history_category` if agent detected
 //! - `learnings`: If contains problem-solving narratives
 //! - `sessions`: Default for regular work sessions
 
 use std::path::PathBuf;
 
 use super::{HookEvent, HookHandler, HookResult};
+use crate::agent::loader::AgentLoader;
 use crate::history::categorize::{categorize_content, extract_summary, extract_tags};
 use crate::history::{HistoryEntry, HistoryStore};
 
@@ -16,11 +18,29 @@ use crate::history::{HistoryEntry, HistoryStore};
 pub struct HistoryHandler {
     enabled: bool,
     history_path: PathBuf,
+    agents_dir: PathBuf,
 }
 
 impl HistoryHandler {
     pub fn new(enabled: bool, history_path: PathBuf) -> Self {
-        Self { enabled, history_path }
+        // Default agents dir is sibling to history (e.g., ~/.config/pais/agents)
+        let agents_dir = history_path
+            .parent()
+            .map(|p| p.join("agents"))
+            .unwrap_or_else(|| history_path.join("../agents"));
+
+        Self {
+            enabled,
+            history_path,
+            agents_dir,
+        }
+    }
+
+    /// Set a custom agents directory
+    #[allow(dead_code)]
+    pub fn with_agents_dir(mut self, agents_dir: PathBuf) -> Self {
+        self.agents_dir = agents_dir;
+        self
     }
 
     fn on_session_start(&self, payload: &serde_json::Value) -> HookResult {
@@ -64,6 +84,22 @@ impl HistoryHandler {
     }
 
     fn on_stop(&self, payload: &serde_json::Value) -> HookResult {
+        self.capture_stop_event(payload, None)
+    }
+
+    fn on_subagent_stop(&self, payload: &serde_json::Value) -> HookResult {
+        // Extract agent type from payload
+        let agent_type = payload
+            .get("subagent_type")
+            .or_else(|| payload.get("agent_type"))
+            .or_else(|| payload.get("agent"))
+            .and_then(|v| v.as_str());
+
+        self.capture_stop_event(payload, agent_type)
+    }
+
+    /// Shared logic for Stop and SubagentStop events
+    fn capture_stop_event(&self, payload: &serde_json::Value, agent_type: Option<&str>) -> HookResult {
         let session_id = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("unknown");
 
         let stop_reason = payload
@@ -74,8 +110,8 @@ impl HistoryHandler {
         // Build summary from available info
         let summary = build_session_summary(payload);
 
-        // Categorize the content
-        let category = categorize_content(&summary);
+        // Determine category - agent takes precedence over content analysis
+        let (category_name, agent_name) = self.determine_category(agent_type, &summary);
         let extracted_title = extract_summary(&summary, 60);
         let tags = extract_tags(&summary);
 
@@ -87,10 +123,17 @@ impl HistoryHandler {
         };
 
         // Create history entry with determined category
-        let mut entry = HistoryEntry::new(category.dir_name(), &title, &summary)
+        let mut entry = HistoryEntry::new(&category_name, &title, &summary)
             .with_tag(stop_reason)
             .with_metadata("session_id", session_id)
-            .with_metadata("category", category.dir_name());
+            .with_metadata("category", &category_name);
+
+        // Add agent metadata if present
+        if let Some(agent) = agent_name {
+            entry = entry
+                .with_tag(&format!("agent:{}", agent))
+                .with_metadata("agent", &agent);
+        }
 
         // Add extracted tags
         for tag in tags {
@@ -100,7 +143,7 @@ impl HistoryHandler {
         let store = HistoryStore::new(self.history_path.clone());
         match store.store(&entry) {
             Ok(path) => {
-                log::info!("Captured {} to: {}", category.dir_name(), path.display());
+                log::info!("Captured {} to: {}", category_name, path.display());
                 HookResult::Allow
             }
             Err(e) => {
@@ -110,6 +153,29 @@ impl HistoryHandler {
                 }
             }
         }
+    }
+
+    /// Determine history category from agent or content analysis
+    /// Returns (category_name, optional_agent_name)
+    fn determine_category(&self, agent_type: Option<&str>, content: &str) -> (String, Option<String>) {
+        // If agent type provided, try to load agent and get its history_category
+        if let Some(agent_name) = agent_type {
+            let loader = AgentLoader::new(self.agents_dir.clone());
+            let agent_path = self.agents_dir.join(format!("{}.yaml", agent_name.to_lowercase()));
+
+            if let Ok(agent) = loader.load_agent(&agent_path) {
+                if let Some(category) = agent.history_category {
+                    log::info!("Using agent '{}' history category: {}", agent_name, category);
+                    return (category, Some(agent_name.to_string()));
+                }
+            } else {
+                log::debug!("Agent '{}' not found, falling back to content analysis", agent_name);
+            }
+        }
+
+        // Fall back to content-based categorization
+        let category = categorize_content(content);
+        (category.dir_name().to_string(), None)
     }
 
     fn on_session_end(&self, payload: &serde_json::Value) -> HookResult {
@@ -134,13 +200,18 @@ impl HistoryHandler {
 
 impl HookHandler for HistoryHandler {
     fn handles(&self, event: HookEvent) -> bool {
-        self.enabled && matches!(event, HookEvent::SessionStart | HookEvent::Stop | HookEvent::SessionEnd)
+        self.enabled
+            && matches!(
+                event,
+                HookEvent::SessionStart | HookEvent::Stop | HookEvent::SubagentStop | HookEvent::SessionEnd
+            )
     }
 
     fn handle(&self, event: HookEvent, payload: &serde_json::Value) -> HookResult {
         match event {
             HookEvent::SessionStart => self.on_session_start(payload),
             HookEvent::Stop => self.on_stop(payload),
+            HookEvent::SubagentStop => self.on_subagent_stop(payload),
             HookEvent::SessionEnd => self.on_session_end(payload),
             _ => HookResult::Allow,
         }
@@ -196,6 +267,7 @@ fn build_session_summary(payload: &serde_json::Value) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+    use tempfile::tempdir;
 
     #[test]
     fn test_build_session_summary() {
@@ -208,5 +280,38 @@ mod tests {
         assert!(summary.contains("user_request"));
         assert!(summary.contains("Bash"));
         assert!(summary.contains("Edit"));
+    }
+
+    #[test]
+    fn test_determine_category_content_based() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
+
+        // Content-based categorization (no agent)
+        let (category, agent) = handler.determine_category(None, "debugging the problem and found the root cause");
+        assert_eq!(category, "learnings");
+        assert!(agent.is_none());
+    }
+
+    #[test]
+    fn test_determine_category_fallback_when_agent_not_found() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
+
+        // Agent not found, falls back to content analysis
+        let (category, agent) = handler.determine_category(Some("nonexistent"), "regular session work");
+        assert_eq!(category, "sessions");
+        assert!(agent.is_none());
+    }
+
+    #[test]
+    fn test_handles_subagent_stop() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
+
+        assert!(handler.handles(HookEvent::SubagentStop));
+        assert!(handler.handles(HookEvent::Stop));
+        assert!(handler.handles(HookEvent::SessionStart));
+        assert!(!handler.handles(HookEvent::PreToolUse));
     }
 }

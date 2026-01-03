@@ -268,55 +268,68 @@ src/main.rs                            # Modified - route Observe command
 
 **Goal:** Support for named agent personalities with configurable traits.
 
-### 5.1 Agent Definition
+### 5.1 Agent Definition ✅
 
-**Tasks:**
-- [ ] Define agent trait schema:
-  ```yaml
-  name: researcher
-  traits:
-    thoroughness: 0.9
-    creativity: 0.7
-    verbosity: 0.5
-  voice: analytical
-  focus: investigation
-  ```
-- [ ] Create `~/.config/pais/agents/` directory
-- [ ] Implement agent loading and context injection
+**Implementation:**
+- Composable traits system (Expertise + Personality + Approach)
+- 28 discrete traits (no numeric scales)
+- Agent YAML schema with backstory, traits, communication_style
+- Prompt generation from trait composition
 
-**Files to create:**
+**Files created:**
 ```
-~/.config/pais/agents/researcher.yaml  # Example agent
-~/.config/pais/agents/architect.yaml   # Example agent
-src/agent/mod.rs                       # New - agent module
-src/agent/traits.rs                    # New - trait definitions
-src/agent/loader.rs                    # New - agent loading
+src/agent/mod.rs                       # Agent module
+src/agent/traits.rs                    # 28 composable traits with prompt fragments
+src/agent/loader.rs                    # Agent loading and prompt generation
 ```
 
-### 5.2 Agent Routing (SubagentStop)
-
-**Tasks:**
-- [ ] Detect agent type from session metadata
-- [ ] Route outputs to appropriate history directories:
-  ```
-  researcher → history/research/
-  architect  → history/decisions/
-  engineer   → history/execution/features/
-  ```
-- [ ] Tag history entries with agent name
-
-**Files to modify:**
+**8 Agent Archetypes (from PAI + additions):**
 ```
-src/hook/history.rs                    # Modify - agent-aware routing
-src/history/categorize.rs              # Modify - agent detection
+~/.config/pais/agents/
+├── intern.yaml       # Eager learner - enthusiastic, research, rapid
+├── architect.yaml    # Strategic visionary - technical, analytical, systematic
+├── engineer.yaml     # Battle-scarred implementer - technical, pragmatic, meticulous
+├── researcher.yaml   # Thorough investigator - research, skeptical, thorough
+├── skeptic.yaml      # Red team devil's advocate - security, contrarian, adversarial
+├── creative.yaml     # Lateral thinker - creative, enthusiastic, exploratory
+├── advisor.yaml      # Executive consultant - business, analytical, consultative
+└── reviewer.yaml     # Meticulous quality gate - technical, meticulous, systematic
 ```
 
-### 5.3 Agent CLI Commands
+### 5.2 Agent Routing (SubagentStop) ✅
 
-**Tasks:**
-- [ ] `pais agent list` - list available agents
-- [ ] `pais agent show <name>` - display agent config
-- [ ] `pais agent create <name>` - create new agent from template
+**Implementation:**
+- `SubagentStop` event handler added to `HistoryHandler`
+- Agent detection from payload: `subagent_type`, `agent_type`, or `agent` fields
+- Agent's `history_category` overrides content-based categorization
+- History entries tagged with `agent:<name>` when agent detected
+
+**Routing:**
+```
+researcher → history/research/    (via history_category: research)
+architect  → history/decisions/   (via history_category: decisions)
+engineer   → history/execution/   (via history_category: execution)
+```
+
+**Files modified:**
+```
+src/hook/history.rs     # Added SubagentStop, agent-aware routing
+```
+
+### 5.3 Agent CLI Commands ✅
+
+**Implemented commands:**
+- `pais agent list` - list available agents with traits
+- `pais agent show <name>` - display full agent config
+- `pais agent traits` - list all 28 composable traits
+- `pais agent prompt <name>` - generate prompt from traits
+- `pais agent create <name>` - create new agent from template
+
+**Files created:**
+```
+src/commands/agent.rs                  # Agent CLI commands
+src/cli.rs                             # AgentAction enum
+```
 
 ---
 
