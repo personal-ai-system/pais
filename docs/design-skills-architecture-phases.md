@@ -12,7 +12,7 @@
 | **1** | Simple Skills Support | ✅ Complete | 2026-01-02 |
 | **2** | Skill Management Commands | ✅ Complete | 2026-01-02 |
 | **3** | Sync to Claude Code | ✅ Complete | 2026-01-02 |
-| **4** | Skill Scanning | ⏳ Pending | - |
+| **4** | Skill Scanning | ✅ Complete | 2026-01-02 |
 | **5** | Git Repo Init | ⏳ Pending | - |
 | **6** | Migration | ⏳ Pending | - |
 
@@ -334,9 +334,20 @@ ls -la ~/.claude/skills/
 
 ---
 
-## Phase 4: Skill Scanning
+## Phase 4: Skill Scanning ✅
 
 **Goal:** Discover `.pais/SKILL.md` in repositories you control
+
+**Status:** Complete (2026-01-02)
+
+### What Was Implemented
+
+| File | Purpose |
+|------|---------|
+| `src/skill/scanner.rs` | Scan directories for `.pais/SKILL.md` files |
+| `src/commands/skill.rs` | Added `scan` command handler with `--register` option |
+| `src/cli.rs` | Added `Scan` variant to `SkillAction` |
+| `Cargo.toml` | Added `walkdir` dependency |
 
 ### New Command
 

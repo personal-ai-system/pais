@@ -269,6 +269,24 @@ pub enum SkillAction {
         /// Skill name (or "all" to validate all skills)
         name: String,
     },
+
+    /// Scan directories for .pais/SKILL.md files
+    Scan {
+        /// Directory to scan (defaults to ~/repos)
+        path: Option<PathBuf>,
+
+        /// Maximum depth to scan (default: 4)
+        #[arg(long, default_value = "4")]
+        depth: usize,
+
+        /// Register found skills (create symlinks in ~/.config/pais/skills/)
+        #[arg(long)]
+        register: bool,
+
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
 }
 
 #[derive(Subcommand)]

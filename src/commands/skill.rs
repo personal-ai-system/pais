@@ -6,10 +6,13 @@ use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
 
+use std::path::PathBuf;
+
 use crate::cli::{OutputFormat, SkillAction};
 use crate::config::Config;
 use crate::skill::loader::{discover_plugin_skills, discover_simple_skills, load_simple_skill};
 use crate::skill::parser::{SkillMetadata, parse_skill_md};
+use crate::skill::scanner::{DiscoveredSkill, scan_for_skills};
 use crate::skill::template::generate_skill_template;
 use crate::skill::{Skill, SkillSource};
 
@@ -24,6 +27,12 @@ pub fn run(action: SkillAction, config: &Config) -> Result<()> {
         SkillAction::Edit { name } => edit_skill(&name, config),
         SkillAction::Remove { name, force } => remove_skill(&name, force, config),
         SkillAction::Validate { name } => validate_skill(&name, config),
+        SkillAction::Scan {
+            path,
+            depth,
+            register,
+            format,
+        } => scan_skills(path, depth, register, OutputFormat::resolve(format), config),
     }
 }
 
@@ -368,6 +377,115 @@ fn open_in_editor(path: &std::path::Path) -> Result<()> {
 
     if !status.success() {
         eyre::bail!("Editor exited with non-zero status");
+    }
+
+    Ok(())
+}
+
+/// Scan directories for .pais/SKILL.md files
+fn scan_skills(
+    path: Option<PathBuf>,
+    depth: usize,
+    register: bool,
+    format: OutputFormat,
+    config: &Config,
+) -> Result<()> {
+    // Default to ~/repos if no path provided
+    let scan_path = path.unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| PathBuf::from(".")).join("repos"));
+
+    let scan_path = Config::expand_path(&scan_path);
+
+    if !scan_path.exists() {
+        eyre::bail!("Path does not exist: {}", scan_path.display());
+    }
+
+    println!("Scanning {} (max depth: {})...", scan_path.display(), depth);
+    println!();
+
+    let skills = scan_for_skills(&scan_path, depth).context("Failed to scan for skills")?;
+
+    if skills.is_empty() {
+        println!("No skills found.");
+        println!();
+        println!("To create a skill in a repo, add a .pais/SKILL.md file:");
+        println!("  mkdir -p /path/to/repo/.pais");
+        println!("  # Create .pais/SKILL.md with frontmatter");
+        return Ok(());
+    }
+
+    match format {
+        OutputFormat::Text => {
+            println!("Found {} skill(s):", skills.len());
+            println!();
+            for skill in &skills {
+                println!("  {} - {}", skill.name, skill.description);
+                println!("    Repo: {}", skill.repo_path.display());
+                println!("    Path: {}", skill.pais_path.display());
+                println!();
+            }
+        }
+        OutputFormat::Json => {
+            println!("{}", serde_json::to_string_pretty(&skills)?);
+        }
+        OutputFormat::Yaml => {
+            println!("{}", serde_yaml::to_string(&skills)?);
+        }
+    }
+
+    if register {
+        register_discovered_skills(&skills, config)?;
+    } else if format == OutputFormat::Text {
+        println!("To register these skills, run:");
+        println!("  pais skill scan {} --register", scan_path.display());
+    }
+
+    Ok(())
+}
+
+/// Register discovered skills by creating symlinks in the skills directory
+fn register_discovered_skills(skills: &[DiscoveredSkill], config: &Config) -> Result<()> {
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    fs::create_dir_all(&skills_dir)
+        .with_context(|| format!("Failed to create skills directory: {}", skills_dir.display()))?;
+
+    let mut registered = 0;
+    let mut skipped = 0;
+
+    for skill in skills {
+        let target = skills_dir.join(&skill.name);
+
+        if target.exists() || target.symlink_metadata().is_ok() {
+            println!("  Skipped: {} (already exists)", skill.name);
+            skipped += 1;
+            continue;
+        }
+
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&skill.pais_path, &target)
+                .with_context(|| format!("Failed to create symlink for {}", skill.name))?;
+        }
+
+        #[cfg(not(unix))]
+        {
+            // On non-Unix, copy the files instead
+            fs::create_dir_all(&target)?;
+            let skill_md = skill.pais_path.join("SKILL.md");
+            if skill_md.exists() {
+                fs::copy(&skill_md, target.join("SKILL.md"))?;
+            }
+        }
+
+        println!("  Registered: {} -> {}", skill.name, skill.pais_path.display());
+        registered += 1;
+    }
+
+    println!();
+    println!("Registered: {}, Skipped: {}", registered, skipped);
+
+    if registered > 0 {
+        println!();
+        println!("Run 'pais sync' to sync registered skills to Claude Code.");
     }
 
     Ok(())

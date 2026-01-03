@@ -16,6 +16,7 @@ use std::path::PathBuf;
 
 pub mod loader;
 pub mod parser;
+pub mod scanner;
 pub mod template;
 
 /// A skill that teaches Claude how to do something
