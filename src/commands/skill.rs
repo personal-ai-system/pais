@@ -2,10 +2,15 @@
 
 use eyre::{Context, Result};
 use serde::Serialize;
+use std::fs;
+use std::io::{self, Write};
+use std::process::Command;
 
 use crate::cli::{OutputFormat, SkillAction};
 use crate::config::Config;
-use crate::skill::loader::{discover_plugin_skills, discover_simple_skills};
+use crate::skill::loader::{discover_plugin_skills, discover_simple_skills, load_simple_skill};
+use crate::skill::parser::{SkillMetadata, parse_skill_md};
+use crate::skill::template::generate_skill_template;
 use crate::skill::{Skill, SkillSource};
 
 /// Run a skill subcommand
@@ -14,7 +19,11 @@ pub fn run(action: SkillAction, config: &Config) -> Result<()> {
         SkillAction::List { format, simple, plugin } => {
             list_skills(OutputFormat::resolve(format), simple, plugin, config)
         }
+        SkillAction::Add { name, edit } => add_skill(&name, edit, config),
         SkillAction::Info { name } => show_skill_info(&name, config),
+        SkillAction::Edit { name } => edit_skill(&name, config),
+        SkillAction::Remove { name, force } => remove_skill(&name, force, config),
+        SkillAction::Validate { name } => validate_skill(&name, config),
     }
 }
 
@@ -71,8 +80,7 @@ fn list_skills(format: OutputFormat, only_simple: bool, only_plugin: bool, confi
                 println!("No skills found.");
                 println!();
                 println!("To create a skill:");
-                println!("  mkdir -p ~/.config/pais/skills/myskill");
-                println!("  # Create SKILL.md with frontmatter");
+                println!("  pais skill add <name>");
                 return Ok(());
             }
 
@@ -124,6 +132,44 @@ fn list_skills(format: OutputFormat, only_simple: bool, only_plugin: bool, confi
     Ok(())
 }
 
+/// Create a new skill from template
+fn add_skill(name: &str, open_editor: bool, config: &Config) -> Result<()> {
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    let skill_dir = skills_dir.join(name);
+
+    // Check if skill already exists
+    if skill_dir.exists() {
+        eyre::bail!(
+            "Skill '{}' already exists at {}\nUse 'pais skill edit {}' to modify it.",
+            name,
+            skill_dir.display(),
+            name
+        );
+    }
+
+    // Create directory
+    fs::create_dir_all(&skill_dir)
+        .with_context(|| format!("Failed to create skill directory: {}", skill_dir.display()))?;
+
+    // Generate and write template
+    let template = generate_skill_template(name);
+    let skill_md = skill_dir.join("SKILL.md");
+    fs::write(&skill_md, &template).with_context(|| format!("Failed to write SKILL.md: {}", skill_md.display()))?;
+
+    println!("Created skill: {}", name);
+    println!("  Path: {}", skill_md.display());
+
+    if open_editor {
+        println!();
+        open_in_editor(&skill_md)?;
+    } else {
+        println!();
+        println!("Edit with: pais skill edit {}", name);
+    }
+
+    Ok(())
+}
+
 /// Show details for a specific skill
 fn show_skill_info(name: &str, config: &Config) -> Result<()> {
     let skills_dir = Config::expand_path(&config.paths.skills);
@@ -132,7 +178,7 @@ fn show_skill_info(name: &str, config: &Config) -> Result<()> {
     // Check simple skills first
     let skill_path = skills_dir.join(name);
     if skill_path.exists() && skill_path.join("SKILL.md").exists() {
-        let skill = crate::skill::loader::load_simple_skill(&skill_path)?;
+        let skill = load_simple_skill(&skill_path)?;
         print_skill_details(&skill)?;
         return Ok(());
     }
@@ -146,6 +192,185 @@ fn show_skill_info(name: &str, config: &Config) -> Result<()> {
     }
 
     eyre::bail!("Skill '{}' not found", name);
+}
+
+/// Edit a skill in $EDITOR
+fn edit_skill(name: &str, config: &Config) -> Result<()> {
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    let plugins_dir = Config::expand_path(&config.paths.plugins);
+
+    // Check simple skills first
+    let skill_path = skills_dir.join(name);
+    let skill_md = skill_path.join("SKILL.md");
+    if skill_md.exists() {
+        return open_in_editor(&skill_md);
+    }
+
+    // Check plugins
+    let plugin_path = plugins_dir.join(name);
+    let plugin_skill_md = plugin_path.join("SKILL.md");
+    if plugin_skill_md.exists() {
+        return open_in_editor(&plugin_skill_md);
+    }
+
+    eyre::bail!("Skill '{}' not found.\nCreate it with: pais skill add {}", name, name);
+}
+
+/// Remove a skill
+fn remove_skill(name: &str, force: bool, config: &Config) -> Result<()> {
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    let skill_path = skills_dir.join(name);
+
+    if !skill_path.exists() {
+        eyre::bail!("Skill '{}' not found in {}", name, skills_dir.display());
+    }
+
+    // Check if it's a plugin skill (can't remove those via skill remove)
+    let plugins_dir = Config::expand_path(&config.paths.plugins);
+    let plugin_path = plugins_dir.join(name);
+    if plugin_path.exists() && plugin_path.join("plugin.toml").exists() {
+        eyre::bail!(
+            "Skill '{}' is part of a plugin. Use 'pais plugin remove {}' instead.",
+            name,
+            name
+        );
+    }
+
+    // Confirm removal unless forced
+    if !force {
+        print!("Remove skill '{}' at {}? [y/N] ", name, skill_path.display());
+        io::stdout().flush()?;
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+
+        if !input.trim().eq_ignore_ascii_case("y") {
+            println!("Cancelled.");
+            return Ok(());
+        }
+    }
+
+    // Remove the skill directory
+    fs::remove_dir_all(&skill_path)
+        .with_context(|| format!("Failed to remove skill directory: {}", skill_path.display()))?;
+
+    println!("Removed skill: {}", name);
+    Ok(())
+}
+
+/// Validate SKILL.md format
+fn validate_skill(name: &str, config: &Config) -> Result<()> {
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    let plugins_dir = Config::expand_path(&config.paths.plugins);
+
+    if name == "all" {
+        // Validate all skills
+        let mut errors = Vec::new();
+        let mut valid_count = 0;
+
+        // Check simple skills
+        if skills_dir.exists() {
+            for entry in fs::read_dir(&skills_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_dir() {
+                    let skill_md = path.join("SKILL.md");
+                    if skill_md.exists() {
+                        match validate_skill_md(&skill_md) {
+                            Ok(_) => {
+                                valid_count += 1;
+                                println!("✓ {}", entry.file_name().to_string_lossy());
+                            }
+                            Err(e) => {
+                                errors.push((entry.file_name().to_string_lossy().to_string(), e));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check plugin skills
+        if plugins_dir.exists() {
+            for entry in fs::read_dir(&plugins_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_dir() {
+                    let skill_md = path.join("SKILL.md");
+                    if skill_md.exists() {
+                        match validate_skill_md(&skill_md) {
+                            Ok(_) => {
+                                valid_count += 1;
+                                println!("✓ {} (plugin)", entry.file_name().to_string_lossy());
+                            }
+                            Err(e) => {
+                                errors.push((format!("{} (plugin)", entry.file_name().to_string_lossy()), e));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        println!();
+        if errors.is_empty() {
+            println!("✓ All {} skill(s) valid", valid_count);
+        } else {
+            println!("Validation errors:");
+            for (name, err) in &errors {
+                println!("  ✗ {}: {}", name, err);
+            }
+            println!();
+            println!("{} valid, {} with errors", valid_count, errors.len());
+            eyre::bail!("Some skills have validation errors");
+        }
+    } else {
+        // Validate single skill
+        let skill_path = skills_dir.join(name);
+        let skill_md = skill_path.join("SKILL.md");
+
+        if !skill_md.exists() {
+            // Check plugins
+            let plugin_path = plugins_dir.join(name);
+            let plugin_skill_md = plugin_path.join("SKILL.md");
+            if plugin_skill_md.exists() {
+                validate_skill_md(&plugin_skill_md)?;
+                println!("✓ Skill '{}' (plugin) is valid", name);
+                return Ok(());
+            }
+            eyre::bail!("Skill '{}' not found", name);
+        }
+
+        validate_skill_md(&skill_md)?;
+        println!("✓ Skill '{}' is valid", name);
+    }
+
+    Ok(())
+}
+
+/// Validate a single SKILL.md file
+fn validate_skill_md(path: &std::path::Path) -> Result<SkillMetadata> {
+    parse_skill_md(path)
+}
+
+/// Open a file in the user's preferred editor
+fn open_in_editor(path: &std::path::Path) -> Result<()> {
+    let editor = std::env::var("EDITOR")
+        .or_else(|_| std::env::var("VISUAL"))
+        .unwrap_or_else(|_| "vi".to_string());
+
+    println!("Opening in {}...", editor);
+
+    let status = Command::new(&editor)
+        .arg(path)
+        .status()
+        .with_context(|| format!("Failed to open editor: {}", editor))?;
+
+    if !status.success() {
+        eyre::bail!("Editor exited with non-zero status");
+    }
+
+    Ok(())
 }
 
 fn print_skill_details(skill: &Skill) -> Result<()> {
@@ -167,7 +392,7 @@ fn print_skill_details(skill: &Skill) -> Result<()> {
         println!();
         println!("SKILL.md preview:");
         println!("─────────────────");
-        let content = std::fs::read_to_string(&skill_md)?;
+        let content = fs::read_to_string(&skill_md)?;
         // Show first 20 lines
         for (i, line) in content.lines().take(20).enumerate() {
             println!("{}", line);

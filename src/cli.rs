@@ -221,9 +221,41 @@ pub enum SkillAction {
         plugin: bool,
     },
 
+    /// Create a new skill from template
+    Add {
+        /// Skill name
+        name: String,
+
+        /// Open in $EDITOR after creation
+        #[arg(long, short = 'e')]
+        edit: bool,
+    },
+
     /// Show skill details
     Info {
         /// Skill name
+        name: String,
+    },
+
+    /// Edit a skill in $EDITOR
+    Edit {
+        /// Skill name
+        name: String,
+    },
+
+    /// Remove a skill
+    Remove {
+        /// Skill name
+        name: String,
+
+        /// Remove without confirmation
+        #[arg(long)]
+        force: bool,
+    },
+
+    /// Validate SKILL.md format
+    Validate {
+        /// Skill name (or "all" to validate all skills)
         name: String,
     },
 }

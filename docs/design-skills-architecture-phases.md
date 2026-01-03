@@ -10,7 +10,7 @@
 | Phase | Description | Status | Completed |
 |-------|-------------|--------|-----------|
 | **1** | Simple Skills Support | ✅ Complete | 2026-01-02 |
-| **2** | Skill Management Commands | ⏳ Pending | - |
+| **2** | Skill Management Commands | ✅ Complete | 2026-01-02 |
 | **3** | Sync to Claude Code | ⏳ Pending | - |
 | **4** | Skill Scanning | ⏳ Pending | - |
 | **5** | Git Repo Init | ⏳ Pending | - |
@@ -104,9 +104,19 @@ pais skill info <name>  # Show details for a specific skill
 
 ---
 
-## Phase 2: Skill Management Commands
+## Phase 2: Skill Management Commands ✅
 
 **Goal:** CLI commands for managing simple skills
+
+**Status:** Complete (2026-01-02)
+
+### What Was Implemented
+
+| File | Purpose |
+|------|---------|
+| `src/skill/template.rs` | Generate SKILL.md templates for new skills |
+| `src/commands/skill.rs` | Added `add`, `edit`, `remove`, `validate` handlers |
+| `src/cli.rs` | Added new `SkillAction` variants |
 
 ### New Commands
 
@@ -183,12 +193,13 @@ pais skill validate <name>         # Validate SKILL.md format
    [Additional context]
    ```
 
-### Files to Create
+### Files Created/Modified
 
-| File | Purpose |
-|------|---------|
-| `src/commands/skill.rs` | Skill subcommand handlers |
-| `src/skill/template.rs` | Skill templates |
+| File | Purpose | Status |
+|------|---------|--------|
+| `src/skill/template.rs` | Skill template generation | ✅ |
+| `src/commands/skill.rs` | Skill subcommand handlers | ✅ |
+| `src/cli.rs` | Added SkillAction variants | ✅ |
 
 ### CLI Updates
 
