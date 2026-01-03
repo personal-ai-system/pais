@@ -46,13 +46,14 @@ fn setup_logging() -> Result<()> {
 
 fn run(cli: Cli, config: Config) -> Result<()> {
     match cli.command {
-        Commands::Init { path, force } => commands::init::run(path, force),
+        Commands::Init { path, force, no_git } => commands::init::run(path, force, no_git),
         Commands::Doctor => commands::doctor::run(&config),
         Commands::Plugin { action } => commands::plugin::run(action, &config),
         Commands::Skill { action } => commands::skill::run(action, &config),
         Commands::Hook { action } => commands::hook::run(action, &config),
         Commands::History { action } => commands::history::run(action, &config),
         Commands::Config { action } => commands::config::run(action, &config),
+        Commands::Context { action } => commands::context::run(action, &config),
         Commands::Registry { action } => commands::registry::run(action, &config),
         Commands::Run { plugin, action, args } => commands::run::run(&plugin, &action, &args, &config),
         Commands::Status { format } => commands::status::run(cli::OutputFormat::resolve(format), &config),

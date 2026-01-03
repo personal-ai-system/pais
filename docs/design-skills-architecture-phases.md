@@ -13,8 +13,8 @@
 | **2** | Skill Management Commands | ✅ Complete | 2026-01-02 |
 | **3** | Sync to Claude Code | ✅ Complete | 2026-01-02 |
 | **4** | Skill Scanning | ✅ Complete | 2026-01-02 |
-| **5** | Git Repo Init | ⏳ Pending | - |
-| **6** | Migration | ⏳ Pending | - |
+| **5** | Git Repo Init | ✅ Complete | 2026-01-02 |
+| **6** | Migration | ✅ Complete | 2026-01-02 |
 
 ---
 
@@ -426,9 +426,18 @@ pais sync
 
 ---
 
-## Phase 5: Init as Git Repo
+## Phase 5: Init as Git Repo ✅
 
 **Goal:** `pais init` creates `~/.config/pais/` as a trackable git repo
+
+**Status:** Complete (2026-01-02)
+
+### What Was Implemented
+
+| File | Purpose |
+|------|---------|
+| `src/commands/init.rs` | Updated to create skills/, .gitignore, init git repo |
+| `src/cli.rs` | Added `--no-git` flag to Init command |
 
 ### Updated `pais init`
 
@@ -437,156 +446,101 @@ pais init                          # Initialize with git repo
 pais init --no-git                 # Without git
 ```
 
-### Implementation
+### Key Features
 
-```rust
-fn init(path: Option<PathBuf>, no_git: bool, config: &Config) -> Result<()> {
-    let pais_dir = path.unwrap_or_else(|| config.paths.pais_dir());
-
-    // Create directory structure
-    fs::create_dir_all(pais_dir.join("skills"))?;
-    fs::create_dir_all(pais_dir.join("plugins"))?;
-    fs::create_dir_all(pais_dir.join("history"))?;
-    fs::create_dir_all(pais_dir.join("registries"))?;
-
-    // Create default config
-    if !pais_dir.join("pais.toml").exists() {
-        fs::write(pais_dir.join("pais.toml"), DEFAULT_CONFIG)?;
-    }
-
-    // Create .gitignore
-    let gitignore = r#"# Secrets
-.env
-
-# Installed plugins (from registries)
-plugins/
-
-# Runtime data
-history/
-registries/
-
-# Cache
-*.cache
-"#;
-    fs::write(pais_dir.join(".gitignore"), gitignore)?;
-
-    // Initialize git repo
-    if !no_git && !pais_dir.join(".git").exists() {
-        Command::new("git")
-            .args(["init"])
-            .current_dir(&pais_dir)
-            .status()?;
-
-        Command::new("git")
-            .args(["add", "-A"])
-            .current_dir(&pais_dir)
-            .status()?;
-
-        Command::new("git")
-            .args(["commit", "-m", "Initial PAIS configuration"])
-            .current_dir(&pais_dir)
-            .status()?;
-
-        println!("Initialized git repo at {}", pais_dir.display());
-    }
-
-    // Set up Claude Code integration
-    setup_claude_hooks(&pais_dir)?;
-
-    println!("PAIS initialized at {}", pais_dir.display());
-    println!("\nNext steps:");
-    println!("  pais skill add <name>    # Create a skill");
-    println!("  pais sync                # Sync to Claude Code");
-}
-```
+1. **Directory structure**: Creates `plugins/`, `skills/`, `history/`, `registries/`
+2. **.gitignore**: Excludes plugins/, history/, registries/, secrets
+3. **Git initialization**: Auto-creates repo with initial commit (unless `--no-git`)
+4. **Claude Code integration**: Creates `~/.claude/skills/` directory
 
 ### Deliverable
 
 ```bash
 pais init
 
-Initialized PAIS at /home/scott/.config/pais
-Initialized git repo at /home/scott/.config/pais
+→ Initializing PAIS in /home/scott/.config/pais
+  ✓ Created plugins/
+  ✓ Created skills/
+  ✓ Created history/
+  ✓ Created registries/
+  ✓ Created history subdirectories
+  ✓ Created pais.toml
+  ✓ Created .gitignore
+  ✓ Initialized git repository
+  ✓ Created initial commit
+
+✓ PAIS initialized!
 
 Next steps:
-  pais skill add <name>    # Create a skill
-  pais sync                # Sync to Claude Code
+  1. Run pais doctor to verify setup
+  2. Run pais skill add <name> to create a skill
+  3. Run pais sync to sync to Claude Code
 
-# Check it's a git repo
-cd ~/.config/pais && git status
-# On branch main
-# nothing to commit, working tree clean
+Git repository:
+  /home/scott/.config/pais is now a git repo
+  Your skills and config are version controlled
 ```
 
 ---
 
-## Phase 6: Migration
+## Phase 6: Migration ✅
 
 **Goal:** Move current plugins to their proper locations
 
-### One-Time Script
+**Status:** Complete (2026-01-02)
+
+### What Was Implemented
+
+**Decision:** All skills centralized in `~/.config/pais/skills/` rather than distributed to individual repos.
+
+This simplifies management:
+- One repo (`scottidler/pais`) to manage all skills
+- Easy backup/sync - push one repo
+- No need to commit `.pais/` folders to each tool repo
+
+### Migration Steps Performed
+
+1. **Created `scottidler/pais` repo** on GitHub
+2. **Cloned to `~/.config/pais/`**
+3. **Ran `pais init`** to create directory structure
+4. **Copied all skills** from `personal-ai-system/pais/plugins/` to `~/.config/pais/skills/`
+
+### Skills Migrated
+
+| Skill | Description |
+|-------|-------------|
+| aka | Shell alias manager |
+| cidr | Network CIDR calculator |
+| dashify | Filename normalizer |
+| git-tools | Git productivity tools |
+| otto | Task runner |
+| python-coder | Python coding conventions |
+| rkvr | Safe file deletion |
+| rust-coder | Rust coding conventions |
+| whitespace | Trailing whitespace remover |
+
+### Next Steps
 
 ```bash
-#!/bin/bash
-# migrate-skills.sh
-
-PAIS_REPO=~/repos/personal-ai-system/pais
-CONFIG_DIR=~/.config/pais
-
-# Initialize config
-pais init
-
-# Move convention/documentation skills to config
-for skill in rust-coder python-coder; do
-    if [ -d "$PAIS_REPO/plugins/$skill" ]; then
-        cp -r "$PAIS_REPO/plugins/$skill" "$CONFIG_DIR/skills/"
-        echo "Moved $skill to config"
-    fi
-done
-
-# For controlled tools, create .pais/ in their repos
-declare -A TOOL_REPOS=(
-    ["aka"]="$HOME/repos/scottidler/aka"
-    ["otto"]="$HOME/repos/scottidler/otto"
-    ["cidr"]="$HOME/repos/scottidler/cidr"
-    ["dashify"]="$HOME/repos/scottidler/dashify"
-    ["git-tools"]="$HOME/repos/scottidler/git-tools"
-    ["rkvr"]="$HOME/repos/scottidler/rkvr"
-    ["whitespace"]="$HOME/repos/scottidler/whitespace"
-)
-
-for skill in "${!TOOL_REPOS[@]}"; do
-    repo="${TOOL_REPOS[$skill]}"
-    if [ -d "$repo" ] && [ -d "$PAIS_REPO/plugins/$skill" ]; then
-        mkdir -p "$repo/.pais"
-        cp "$PAIS_REPO/plugins/$skill/SKILL.md" "$repo/.pais/"
-        # Copy plugin.toml only if it has hooks/code
-        if grep -q "hooks\|provides\|consumes" "$PAIS_REPO/plugins/$skill/plugin.toml" 2>/dev/null; then
-            cp "$PAIS_REPO/plugins/$skill/plugin.toml" "$repo/.pais/"
-        fi
-        echo "Moved $skill to $repo/.pais/"
-    fi
-done
-
-# Commit config changes
-cd "$CONFIG_DIR"
+# Commit the migrated skills
+cd ~/.config/pais
 git add -A
 git commit -m "Migrate skills from pais repo"
+git push
 
-# Clean up pais repo (keep examples only)
-cd "$PAIS_REPO"
-rm -rf plugins/aka plugins/otto plugins/cidr plugins/dashify
-rm -rf plugins/git-tools plugins/rkvr plugins/whitespace
-rm -rf plugins/rust-coder plugins/python-coder
-# Keep: examples/hello-world, examples/hello-rust
+# Sync to Claude Code
+pais sync
 
+# Optionally clean up old plugins from pais repo
+cd ~/repos/personal-ai-system/pais
+rm -rf plugins/
 git add -A
-git commit -m "Remove personal skills (moved to proper locations)"
-
-echo "Migration complete!"
-echo ""
-echo "Don't forget to commit .pais/ in each tool repo"
+git commit -m "Remove plugins (migrated to scottidler/pais)"
 ```
+
+### Future Considerations
+
+If distributing skills with tool repos becomes desirable later, `pais skill scan` (Phase 4) already supports discovering `.pais/SKILL.md` files in repositories.
 
 ---
 

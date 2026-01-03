@@ -1,5 +1,6 @@
 pub mod completions;
 pub mod config;
+pub mod context;
 pub mod doctor;
 pub mod history;
 pub mod hook;

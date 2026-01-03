@@ -66,6 +66,10 @@ pub enum Commands {
         /// Overwrite existing configuration
         #[arg(long)]
         force: bool,
+
+        /// Skip git repository initialization
+        #[arg(long)]
+        no_git: bool,
     },
 
     /// Diagnose setup issues
@@ -99,6 +103,12 @@ pub enum Commands {
     Config {
         #[command(subcommand)]
         action: ConfigAction,
+    },
+
+    /// Context injection for hooks
+    Context {
+        #[command(subcommand)]
+        action: ContextAction,
     },
 
     /// Manage plugin registries
@@ -287,6 +297,13 @@ pub enum SkillAction {
         #[arg(long, short = 'o', value_enum)]
         format: Option<OutputFormat>,
     },
+
+    /// Generate skill index for context injection
+    Index {
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -346,6 +363,16 @@ pub enum HistoryAction {
 
     /// List available categories
     Categories,
+}
+
+#[derive(Subcommand)]
+pub enum ContextAction {
+    /// Inject skill context for SessionStart hook
+    Inject {
+        /// Output raw content without system-reminder wrapper
+        #[arg(long)]
+        raw: bool,
+    },
 }
 
 #[derive(Subcommand)]

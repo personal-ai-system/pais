@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "paii hook dispatch PreToolUse"
+            "command": "pais hook dispatch PreToolUse"
           }
         ]
       }
@@ -17,7 +17,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "paii hook dispatch SessionStart"
+            "command": "pais context inject"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pais hook dispatch SessionStart"
           }
         ]
       }
@@ -28,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "paii hook dispatch Stop"
+            "command": "pais hook dispatch Stop"
           }
         ]
       }
@@ -39,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "paii hook dispatch SessionEnd"
+            "command": "pais hook dispatch SessionEnd"
           }
         ]
       }

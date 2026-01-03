@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 use crate::cli::{OutputFormat, SkillAction};
 use crate::config::Config;
+use crate::skill::indexer::{generate_context_snippet, generate_index, write_index};
 use crate::skill::loader::{discover_plugin_skills, discover_simple_skills, load_simple_skill};
 use crate::skill::parser::{SkillMetadata, parse_skill_md};
 use crate::skill::scanner::{DiscoveredSkill, scan_for_skills};
@@ -33,6 +34,7 @@ pub fn run(action: SkillAction, config: &Config) -> Result<()> {
             register,
             format,
         } => scan_skills(path, depth, register, OutputFormat::resolve(format), config),
+        SkillAction::Index { format } => generate_skill_index(OutputFormat::resolve(format), config),
     }
 }
 
@@ -521,4 +523,87 @@ fn print_skill_details(skill: &Skill) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Generate skill index for context injection
+fn generate_skill_index(format: OutputFormat, config: &Config) -> Result<()> {
+    let skills_dir = Config::expand_path(&config.paths.skills);
+
+    println!("Generating skill index from {}...", skills_dir.display());
+    println!();
+
+    let index = generate_index(&skills_dir).context("Failed to generate skill index")?;
+
+    // Write the index file
+    let index_path = skills_dir.join("skill-index.json");
+    write_index(&index, &index_path).context("Failed to write skill index")?;
+
+    match format {
+        OutputFormat::Text => {
+            println!("Skills indexed:");
+            println!();
+
+            // Group by tier
+            let mut core: Vec<_> = index.skills.values().filter(|s| s.tier == "core").collect();
+            let mut deferred: Vec<_> = index.skills.values().filter(|s| s.tier == "deferred").collect();
+
+            core.sort_by(|a, b| a.name.cmp(&b.name));
+            deferred.sort_by(|a, b| a.name.cmp(&b.name));
+
+            if !core.is_empty() {
+                println!("Core Skills (always loaded):");
+                for skill in &core {
+                    println!("  🔒 {} - {}", skill.name, truncate_desc(&skill.description, 50));
+                    if !skill.triggers.is_empty() {
+                        println!("      Triggers: {}", skill.triggers.join(", "));
+                    }
+                }
+                println!();
+            }
+
+            println!("Deferred Skills (loaded on match):");
+            for skill in &deferred {
+                println!("  📦 {} - {}", skill.name, truncate_desc(&skill.description, 50));
+                if !skill.triggers.is_empty() {
+                    println!("      Triggers: {}", skill.triggers.join(", "));
+                }
+            }
+            println!();
+
+            println!("Index written to: {}", index_path.display());
+            println!();
+            println!("Summary:");
+            println!("  Total: {} skill(s)", index.total_skills);
+            println!("  Core: {} skill(s)", index.core_count);
+            println!("  Deferred: {} skill(s)", index.deferred_count);
+            println!();
+
+            // Also generate context snippet
+            let context = generate_context_snippet(&index, &skills_dir);
+            let context_path = skills_dir.join("context-snippet.md");
+            fs::write(&context_path, &context)
+                .with_context(|| format!("Failed to write context snippet: {}", context_path.display()))?;
+            println!("Context snippet written to: {}", context_path.display());
+            println!();
+            println!("Next steps:");
+            println!("  1. Run 'pais sync' to update Claude Code");
+            println!("  2. The SessionStart hook will inject this context");
+        }
+        OutputFormat::Json => {
+            println!("{}", serde_json::to_string_pretty(&index)?);
+        }
+        OutputFormat::Yaml => {
+            println!("{}", serde_yaml::to_string(&index)?);
+        }
+    }
+
+    Ok(())
+}
+
+fn truncate_desc(desc: &str, max_len: usize) -> String {
+    if desc.len() <= max_len {
+        desc.to_string()
+    } else {
+        format!("{}...", &desc[..max_len - 3])
+    }
 }

@@ -14,6 +14,7 @@
 
 use std::path::PathBuf;
 
+pub mod indexer;
 pub mod loader;
 pub mod parser;
 pub mod scanner;
