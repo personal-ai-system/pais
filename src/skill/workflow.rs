@@ -19,7 +19,7 @@
 //! ```
 
 use eyre::{Context, Result};
-use regex::Regex;
+use lazy_regex::regex_captures;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -69,15 +69,14 @@ impl SkillWorkflows {
 pub fn parse_workflows(skill_name: &str, content: &str) -> SkillWorkflows {
     let mut routes = Vec::new();
 
-    // Look for markdown table after "## Workflow Routing" or similar header
-    let table_pattern = Regex::new(r"(?i)##\s*workflow\s*(routing)?\s*\n").unwrap();
+    // Look for markdown table after "## Workflow Routing" or similar header (case insensitive)
+    let content_lower = content.to_lowercase();
+    let header_pos = content_lower.find("## workflow");
 
-    if let Some(header_match) = table_pattern.find(content) {
-        let after_header = &content[header_match.end()..];
-
-        // Parse markdown table rows: | intent | workflow |
-        // Skip header row and separator row
-        let row_pattern = Regex::new(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|").unwrap();
+    if let Some(pos) = header_pos {
+        // Find the newline after the header
+        let header_end = content[pos..].find('\n').map(|p| pos + p + 1).unwrap_or(pos);
+        let after_header = &content[header_end..];
 
         let mut in_table = false;
         let mut skipped_header = false;
@@ -117,10 +116,10 @@ pub fn parse_workflows(skill_name: &str, content: &str) -> SkillWorkflows {
                 continue;
             }
 
-            // Parse data row
-            if let Some(caps) = row_pattern.captures(trimmed) {
-                let intent = caps.get(1).map(|m| m.as_str().trim()).unwrap_or("");
-                let workflow = caps.get(2).map(|m| m.as_str().trim()).unwrap_or("");
+            // Parse data row using compile-time validated regex
+            if let Some((_, intent, workflow)) = regex_captures!(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|", trimmed) {
+                let intent = intent.trim();
+                let workflow = workflow.trim();
 
                 if !intent.is_empty() && !workflow.is_empty() {
                     routes.push(WorkflowRoute {

@@ -360,7 +360,10 @@ impl HistoryStore {
 /// Generate a unique ID for an entry
 fn generate_id() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0); // Fallback to 0 if system time is before UNIX_EPOCH (shouldn't happen)
     format!("{:x}", timestamp)
 }
 

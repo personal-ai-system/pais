@@ -58,7 +58,7 @@ fn dispatch(event: &str, payload: Option<&str>, config: &Config) -> Result<()> {
     let history_enabled = config.hooks.history_enabled;
 
     let handlers: Vec<Box<dyn HookHandler>> = vec![
-        Box::new(SecurityValidator::new(security_enabled)),
+        Box::new(SecurityValidator::new(security_enabled).with_log_path(history_path.clone())),
         Box::new(HistoryHandler::new(history_enabled, history_path)),
     ];
 

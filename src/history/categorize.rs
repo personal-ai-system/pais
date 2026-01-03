@@ -6,8 +6,6 @@
 //! - `research`: Investigation reports
 //! - `decisions`: Architectural/design decisions
 
-use regex::Regex;
-
 /// Content category
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
@@ -152,18 +150,43 @@ pub fn extract_summary(content: &str, max_len: usize) -> String {
 pub fn extract_tags(content: &str) -> Vec<String> {
     let mut tags = Vec::new();
 
-    // Look for common technical terms
-    let tech_patterns = Regex::new(
-        r"(?i)\b(rust|python|typescript|javascript|docker|kubernetes|aws|gcp|azure|api|cli|database|sql|git|ci|cd|test|deploy|build|config|yaml|json|toml|http|grpc|websocket)\b",
-    )
-    .unwrap();
+    // Known technical terms to look for
+    let tech_terms = [
+        "rust",
+        "python",
+        "typescript",
+        "javascript",
+        "docker",
+        "kubernetes",
+        "aws",
+        "gcp",
+        "azure",
+        "api",
+        "cli",
+        "database",
+        "sql",
+        "git",
+        "ci",
+        "cd",
+        "test",
+        "deploy",
+        "build",
+        "config",
+        "yaml",
+        "json",
+        "toml",
+        "http",
+        "grpc",
+        "websocket",
+    ];
 
-    for cap in tech_patterns.captures_iter(content) {
-        if let Some(m) = cap.get(1) {
-            let tag = m.as_str().to_lowercase();
-            if !tags.contains(&tag) {
-                tags.push(tag);
-            }
+    // Look for common technical terms
+    let content_lower = content.to_lowercase();
+    for word in content_lower.split_whitespace() {
+        // Strip common punctuation from word boundaries
+        let clean = word.trim_matches(|c: char| !c.is_alphanumeric());
+        if tech_terms.contains(&clean) && !tags.contains(&clean.to_string()) {
+            tags.push(clean.to_string());
         }
     }
 

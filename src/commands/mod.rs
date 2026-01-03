@@ -8,6 +8,7 @@ pub mod init;
 pub mod plugin;
 pub mod registry;
 pub mod run;
+pub mod security;
 pub mod skill;
 pub mod status;
 pub mod sync;

@@ -303,8 +303,12 @@ fn install_from_registry(name: &str, force: bool, config: &Config) -> Result<()>
 
     println!("  {} Cloning {}...", "→".blue(), source_url.dimmed());
 
+    let clone_path_str = clone_path
+        .to_str()
+        .ok_or_else(|| eyre::eyre!("Clone path contains invalid UTF-8"))?;
+
     let status = Command::new("git")
-        .args(["clone", "--depth", "1", source_url, clone_path.to_str().unwrap()])
+        .args(["clone", "--depth", "1", source_url, clone_path_str])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::piped())
         .status()

@@ -117,6 +117,12 @@ pub enum Commands {
         action: RegistryAction,
     },
 
+    /// Security validation tools
+    Security {
+        #[command(subcommand)]
+        action: SecurityAction,
+    },
+
     /// Run a plugin action directly
     Run {
         /// Plugin name
@@ -481,5 +487,32 @@ pub enum RegistryAction {
         /// Output format (default: text for TTY, json for pipes)
         #[arg(long, short = 'o', value_enum)]
         format: Option<OutputFormat>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SecurityAction {
+    /// Show security tiers and their actions
+    Tiers {
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// View security event log
+    Log {
+        /// Number of days to show
+        #[arg(long, default_value = "7")]
+        days: usize,
+
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// Test a command against security patterns
+    Test {
+        /// Command to test
+        command: String,
     },
 }

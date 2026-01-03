@@ -159,42 +159,49 @@ src/hook/history.rs                    # Modified - uses categorization on Stop
 
 ---
 
-## Phase 3: Enhanced Security (Protection)
+## Phase 3: Enhanced Security (Protection) ✅ DONE
 
 **Goal:** Expand security validation to match PAI's 10-tier system.
 
-### 3.1 Expand Pattern Tiers
+### 3.1 Expand Pattern Tiers ✅
+
+**Implemented 10 security tiers:**
+
+| Tier | Category | Action |
+|------|----------|--------|
+| 1 | Catastrophic (rm -rf /, dd) | Block |
+| 2 | Reverse shells (bash -i, nc -e, socat) | Block |
+| 3 | Remote code execution (curl\|bash) | Block |
+| 4 | Prompt injection patterns | Block |
+| 5 | Credential theft (.ssh, .aws) | Block |
+| 6 | Environment manipulation (API keys) | Block |
+| 7 | Git dangerous ops (force push) | Warn |
+| 8 | System modification (chmod 777, sudo) | Warn |
+| 9 | Network operations (ssh, scp) | Log |
+| 10 | Data exfiltration (tar\|curl) | Block |
+
+**Files modified:**
+```
+src/hook/security.rs    # SecurityTier, SecurityAction, 10 pattern tiers
+```
+
+### 3.2 Security Logging ✅
 
 **Tasks:**
-- [ ] Add missing tiers:
-  - Tier 2: Reverse shells (bash -i, nc -e, socat)
-  - Tier 4: Prompt injection patterns
-  - Tier 5: Environment manipulation (API key access)
-  - Tier 6: Git dangerous operations (force push, hard reset)
-  - Tier 7: System modification (chmod 777, sudo)
-  - Tier 8: Network operations (ssh, scp)
-  - Tier 9: Data exfiltration (tar | curl)
-  - Tier 10: PAIS-specific protection
-- [ ] Implement action types: `block`, `warn`, `confirm`, `log`
-- [ ] Add configurable security levels in `pais.yaml`
+- [x] Log all security events to `history/security/YYYY-MM/YYYY-MM-DD.jsonl`
+- [x] Include: timestamp, command, tier matched, action taken, session_id
 
-**Files to modify:**
+### 3.3 Security CLI Commands ✅
+
+**Implemented commands:**
+- `pais security tiers` - Show all security tiers and actions
+- `pais security log [--days N]` - View recent security events
+- `pais security test <command>` - Test a command against patterns
+
+**Files created:**
 ```
-src/hook/security.rs                   # Modify - add all tiers
-src/config.rs                          # Modify - security config
-```
-
-### 3.2 Security Logging
-
-**Tasks:**
-- [ ] Log all security events to `history/security/YYYY-MM/`
-- [ ] Include: timestamp, command, tier matched, action taken
-- [ ] Add `pais security log` command to view recent events
-
-**Files to create/modify:**
-```
-src/history/security.rs                # New - security event logging
-src/commands/security.rs               # New - security CLI commands
+src/commands/security.rs    # Security CLI commands
+src/cli.rs                  # SecurityAction enum
 ```
 
 ---

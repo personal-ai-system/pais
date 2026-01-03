@@ -9,7 +9,6 @@
 //! skill routing context into Claude's system prompt.
 
 use eyre::{Context, Result};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -59,40 +58,91 @@ pub fn extract_triggers(description: &str) -> Vec<String> {
     let mut triggers = Vec::new();
 
     // Match "USE WHEN" followed by text until period or end
-    let re = Regex::new(r"(?i)USE WHEN\s+([^.]+)").unwrap();
+    let desc_lower = description.to_lowercase();
 
-    for cap in re.captures_iter(description) {
-        if let Some(clause) = cap.get(1) {
-            // Split on common delimiters and extract words
-            let words: Vec<String> = clause
-                .as_str()
-                .split([',', ' ', '\t', '\n'])
-                .map(|w| w.trim().to_lowercase())
-                .map(|w| {
-                    // Simple plural handling - strip trailing 's' for common cases
-                    if w.ends_with('s') && w.len() > 3 { w[..w.len() - 1].to_string() } else { w }
-                })
-                .filter(|w| {
-                    w.len() > 2
-                        && ![
-                            "the", "and", "for", "with", "when", "user", "asks", "about", "any", "or",
-                        ]
-                        .contains(&w.as_str())
-                })
-                .collect();
-            triggers.extend(words);
-        }
+    // Find USE WHEN clauses
+    let mut search_from = 0;
+    while let Some(pos) = desc_lower[search_from..].find("use when") {
+        let start = search_from + pos + 8; // Skip "use when"
+        let end = desc_lower[start..]
+            .find('.')
+            .map(|p| start + p)
+            .unwrap_or(desc_lower.len());
+        let clause = &desc_lower[start..end];
+
+        // Split on common delimiters and extract words
+        let words: Vec<String> = clause
+            .split([',', ' ', '\t', '\n'])
+            .map(|w| w.trim().to_lowercase())
+            .map(|w| {
+                // Simple plural handling - strip trailing 's' for common cases
+                if w.ends_with('s') && w.len() > 3 { w[..w.len() - 1].to_string() } else { w }
+            })
+            .filter(|w| {
+                w.len() > 2
+                    && ![
+                        "the", "and", "for", "with", "when", "user", "asks", "about", "any", "or",
+                    ]
+                    .contains(&w.as_str())
+            })
+            .collect();
+        triggers.extend(words);
+
+        search_from = end;
     }
 
-    // Also extract key nouns from the full description
-    let key_patterns = Regex::new(r"\b(rust|python|cli|api|test|deploy|build|git|docker|kubernetes|k8s|terraform|aws|gcp|azure|security|auth|database|sql|web|frontend|backend|server|client|config|yaml|json|toml|xml|html|css|js|typescript|react|vue|angular|node|bun|deno|cargo|pip|npm|yarn|pnpm)\b").unwrap();
+    // Also extract key nouns from the full description using compile-time regex
+    let key_terms = [
+        "rust",
+        "python",
+        "cli",
+        "api",
+        "test",
+        "deploy",
+        "build",
+        "git",
+        "docker",
+        "kubernetes",
+        "k8s",
+        "terraform",
+        "aws",
+        "gcp",
+        "azure",
+        "security",
+        "auth",
+        "database",
+        "sql",
+        "web",
+        "frontend",
+        "backend",
+        "server",
+        "client",
+        "config",
+        "yaml",
+        "json",
+        "toml",
+        "xml",
+        "html",
+        "css",
+        "js",
+        "typescript",
+        "react",
+        "vue",
+        "angular",
+        "node",
+        "bun",
+        "deno",
+        "cargo",
+        "pip",
+        "npm",
+        "yarn",
+        "pnpm",
+    ];
 
-    for cap in key_patterns.captures_iter(&description.to_lowercase()) {
-        if let Some(word) = cap.get(1) {
-            let w = word.as_str().to_string();
-            if !triggers.contains(&w) {
-                triggers.push(w);
-            }
+    for word in desc_lower.split_whitespace() {
+        let clean = word.trim_matches(|c: char| !c.is_alphanumeric());
+        if key_terms.contains(&clean) && !triggers.contains(&clean.to_string()) {
+            triggers.push(clean.to_string());
         }
     }
 

@@ -94,7 +94,9 @@ fn add(name: &str, url: &str, config: &Config) -> Result<()> {
 
     // Save config
     let config_path = Config::pais_dir().join("pais.yaml");
-    fs::create_dir_all(config_path.parent().unwrap())?;
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
 
     let yaml_str = serde_yaml::to_string(&new_config).context("Failed to serialize config")?;
     fs::write(&config_path, yaml_str).context("Failed to write config file")?;
