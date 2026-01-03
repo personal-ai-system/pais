@@ -127,6 +127,17 @@ pub enum Commands {
         format: Option<OutputFormat>,
     },
 
+    /// Sync skills to Claude Code (~/.claude/skills/)
+    Sync {
+        /// Show what would happen without making changes
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Remove orphaned symlinks from Claude skills directory
+        #[arg(long)]
+        clean: bool,
+    },
+
     /// Generate shell completions
     Completions {
         /// Shell to generate completions for

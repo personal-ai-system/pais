@@ -56,6 +56,7 @@ fn run(cli: Cli, config: Config) -> Result<()> {
         Commands::Registry { action } => commands::registry::run(action, &config),
         Commands::Run { plugin, action, args } => commands::run::run(&plugin, &action, &args, &config),
         Commands::Status { format } => commands::status::run(cli::OutputFormat::resolve(format), &config),
+        Commands::Sync { dry_run, clean } => commands::sync::run(dry_run, clean, &config),
         Commands::Completions { shell } => commands::completions::run(shell),
     }
 }

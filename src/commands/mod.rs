@@ -9,3 +9,4 @@ pub mod registry;
 pub mod run;
 pub mod skill;
 pub mod status;
+pub mod sync;

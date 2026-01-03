@@ -11,7 +11,7 @@
 |-------|-------------|--------|-----------|
 | **1** | Simple Skills Support | ✅ Complete | 2026-01-02 |
 | **2** | Skill Management Commands | ✅ Complete | 2026-01-02 |
-| **3** | Sync to Claude Code | ⏳ Pending | - |
+| **3** | Sync to Claude Code | ✅ Complete | 2026-01-02 |
 | **4** | Skill Scanning | ⏳ Pending | - |
 | **5** | Git Repo Init | ⏳ Pending | - |
 | **6** | Migration | ⏳ Pending | - |
@@ -243,9 +243,19 @@ pais skill add terraform
 
 ---
 
-## Phase 3: Sync to Claude Code
+## Phase 3: Sync to Claude Code ✅
 
 **Goal:** Sync PAIS skills to `~/.claude/skills/` for Claude Code discovery
+
+**Status:** Complete (2026-01-02)
+
+### What Was Implemented
+
+| File | Purpose |
+|------|---------|
+| `src/commands/sync.rs` | Sync skills to `~/.claude/skills/` using symlinks |
+| `src/cli.rs` | Added `Sync` command with `--dry-run` and `--clean` flags |
+| `src/main.rs` | Added routing for sync command |
 
 ### New Command
 
@@ -300,11 +310,14 @@ pais sync --clean                  # Remove orphaned symlinks
    }
    ```
 
-### Files to Create
+### Files Created/Modified
 
-| File | Purpose |
-|------|---------|
-| `src/commands/sync.rs` | Sync command handler |
+| File | Purpose | Status |
+|------|---------|--------|
+| `src/commands/sync.rs` | Sync command handler | ✅ |
+| `src/commands/mod.rs` | Added sync module | ✅ |
+| `src/cli.rs` | Added Sync command | ✅ |
+| `src/main.rs` | Added sync routing | ✅ |
 
 ### Deliverable
 
