@@ -11,6 +11,7 @@ use crate::hook::security::SecurityValidator;
 use crate::hook::ui::UiHandler;
 use crate::hook::{HookEvent, HookHandler, HookResult};
 use crate::observability::EventEmitter;
+use crate::plugin::PluginManager;
 
 pub fn run(action: HookAction, config: &Config) -> Result<()> {
     match action {
@@ -63,7 +64,7 @@ fn dispatch(event: &str, payload: Option<&str>, config: &Config) -> Result<()> {
         Box::new(UiHandler::new(ui_enabled)),
     ];
 
-    // Run all handlers for this event
+    // Run all built-in handlers for this event
     for handler in &handlers {
         if handler.handles(hook_event) {
             let result = handler.handle(hook_event, &payload);
@@ -81,6 +82,27 @@ fn dispatch(event: &str, payload: Option<&str>, config: &Config) -> Result<()> {
                 HookResult::Allow => {
                     // Continue to next handler
                 }
+            }
+        }
+    }
+
+    // Run plugin hooks
+    let plugins_dir = Config::expand_path(&config.paths.plugins);
+    let mut plugin_manager = PluginManager::new(plugins_dir);
+
+    if plugin_manager.discover().is_ok() {
+        let plugin_results = plugin_manager.execute_hooks(hook_event, &payload);
+
+        for result in plugin_results {
+            match &result {
+                HookResult::Block { message } => {
+                    eprintln!("{}", message);
+                    std::process::exit(result.exit_code());
+                }
+                HookResult::Error { message } => {
+                    log::error!("Plugin hook error: {}", message);
+                }
+                HookResult::Allow => {}
             }
         }
     }

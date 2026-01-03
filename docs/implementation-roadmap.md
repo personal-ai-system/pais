@@ -379,77 +379,54 @@ src/cli.rs                             # Added Upgrade command
 
 ---
 
-## Phase 7: Plugin System (Extensibility)
+## Phase 7: Plugin System (Extensibility) ✅
 
 **Goal:** Enable third-party plugins with full hook/contract support.
 
-### 7.1 Plugin Manifest (plugin.yaml)
+### 7.1 Plugin Manifest (plugin.yaml) ✅
 
-**Tasks:**
-- [ ] Finalize plugin.yaml schema:
-  ```yaml
-  plugin:
-    name: my-plugin
-    version: 1.0.0
-    description: Does something cool
+**Implementation:**
+- `HooksSpec` now uses script paths instead of booleans
+- Each hook can have multiple scripts with optional matchers
+- Scripts specify: `script`, `matcher` (optional), `timeout` (default 30s)
 
-  hooks:
-    PreToolUse: hooks/validate.py
-    Stop: hooks/capture.py
-
-  contract:
-    consumes:
-      - bash-output
-    produces:
-      - analysis-report
-
-  build:
-    type: python  # or rust
-    entrypoint: src/main.py
-  ```
-- [ ] Implement manifest parsing
-- [ ] Validate hook/contract references
-
-**Files to modify:**
-```
-src/plugin/manifest.rs                 # Modify - full schema support
+**Example:**
+```yaml
+hooks:
+  PreToolUse:
+    - script: hooks/validate.py
+      matcher: Bash
+  Stop:
+    - script: hooks/capture.py
 ```
 
-### 7.2 Plugin Hook Execution
+### 7.2 Plugin Hook Execution ✅
 
-**Tasks:**
-- [ ] Execute plugin hooks on relevant events
-- [ ] Pass payload via stdin, capture stdout/stderr
-- [ ] Handle exit codes (0=allow, 2=block)
-- [ ] Support Python and Rust plugin languages
+**Implementation:**
+- `src/plugin/executor.rs` executes plugin scripts
+- Payload passed via stdin as JSON
+- Environment variables: `PAIS_EVENT`, `PAIS_PLUGIN`
+- Exit codes: 0=allow, 2=block, other=error
+- Supports Python (via `uv` or `python3`) and Rust (compiled binaries)
 
-**Files to create/modify:**
-```
-src/plugin/executor.rs                 # New - plugin execution
-src/hook/dispatcher.rs                 # Modify - include plugin hooks
-```
+### 7.3 Contract System ✅
 
-### 7.3 Contract System
+**Implementation:**
+- `src/contract/mod.rs` defines `ContractType` and `ContractRegistry`
+- Plugins declare `provides` and `consumes` in manifest
+- Registry validates contract providers exist
 
-**Tasks:**
-- [ ] Define contract schema (consumes/produces)
-- [ ] Validate contract compatibility between plugins
-- [ ] Enable workflow chaining based on contracts
+### 7.4 Plugin Registry ✅
 
-**Files to create:**
-```
-src/contract/mod.rs                    # New - contract module
-src/contract/validator.rs              # New - contract validation
-src/contract/chain.rs                  # New - workflow chaining
-```
-
-### 7.4 Plugin Registry
-
-**Tasks:**
-- [ ] `pais plugin install <url|path>`
-- [ ] `pais plugin remove <name>`
-- [ ] `pais plugin update <name>`
-- [ ] Support git URLs and local paths
+**Already implemented commands:**
+- `pais plugin install <path|name>` - install from local path or registry
+- `pais plugin install --dev <path>` - symlink for development
+- `pais plugin remove <name>` - uninstall
+- `pais plugin update <name>` - update from registry
+- `pais plugin list` - show installed plugins
+- `pais plugin info <name>` - show plugin details
+- `pais plugin new <name>` - scaffold new plugin
+- `pais plugin verify <name>` - verify plugin structure
 
 ---
 

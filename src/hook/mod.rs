@@ -46,6 +46,23 @@ impl HookEvent {
     }
 }
 
+impl std::fmt::Display for HookEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HookEvent::PreToolUse => write!(f, "PreToolUse"),
+            HookEvent::PostToolUse => write!(f, "PostToolUse"),
+            HookEvent::Stop => write!(f, "Stop"),
+            HookEvent::SessionStart => write!(f, "SessionStart"),
+            HookEvent::SessionEnd => write!(f, "SessionEnd"),
+            HookEvent::SubagentStop => write!(f, "SubagentStop"),
+            HookEvent::Notification => write!(f, "Notification"),
+            HookEvent::PermissionRequest => write!(f, "PermissionRequest"),
+            HookEvent::UserPromptSubmit => write!(f, "UserPromptSubmit"),
+            HookEvent::PreCompact => write!(f, "PreCompact"),
+        }
+    }
+}
+
 /// Result of a hook handler
 #[derive(Debug, Clone)]
 pub enum HookResult {

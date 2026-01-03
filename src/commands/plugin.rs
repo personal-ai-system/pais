@@ -641,13 +641,13 @@ consumes: {{}}
 # Plugin configuration schema
 config: {{}}
 
-# Hook subscriptions
-hooks:
-  pre_tool_use: false
-  post_tool_use: false
-  stop: false
-  session_start: false
-  session_end: false
+# Hook subscriptions (scripts to run on events)
+# hooks:
+#   PreToolUse:
+#     - script: hooks/validate.py
+#       matcher: Bash  # optional - only run for specific tool
+#   Stop:
+#     - script: hooks/capture.py
 
 # Build configuration
 build:

@@ -1,5 +1,7 @@
 //! Plugin manifest parsing (plugin.yaml)
 
+#![allow(dead_code)] // Methods reserved for future use
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -100,25 +102,76 @@ pub struct ConfigSpec {
     pub secret: bool,
 }
 
+/// Hook configuration - maps event types to scripts
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct HooksSpec {
-    #[serde(default)]
-    pub pre_tool_use: bool,
+    /// Scripts to run on PreToolUse
+    #[serde(default, rename = "PreToolUse")]
+    pub pre_tool_use: Vec<HookScript>,
 
-    #[serde(default)]
-    pub post_tool_use: bool,
+    /// Scripts to run on PostToolUse
+    #[serde(default, rename = "PostToolUse")]
+    pub post_tool_use: Vec<HookScript>,
 
-    #[serde(default)]
-    pub stop: bool,
+    /// Scripts to run on Stop
+    #[serde(default, rename = "Stop")]
+    pub stop: Vec<HookScript>,
 
-    #[serde(default)]
-    pub session_start: bool,
+    /// Scripts to run on SessionStart
+    #[serde(default, rename = "SessionStart")]
+    pub session_start: Vec<HookScript>,
 
-    #[serde(default)]
-    pub session_end: bool,
+    /// Scripts to run on SessionEnd
+    #[serde(default, rename = "SessionEnd")]
+    pub session_end: Vec<HookScript>,
 
+    /// Scripts to run on SubagentStop
+    #[serde(default, rename = "SubagentStop")]
+    pub subagent_stop: Vec<HookScript>,
+}
+
+/// A hook script definition
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct HookScript {
+    /// Path to the script (relative to plugin directory)
+    pub script: String,
+
+    /// Optional matcher (e.g., "Bash" to only run on Bash tool)
     #[serde(default)]
-    pub subagent_stop: bool,
+    pub matcher: Option<String>,
+
+    /// Optional timeout in seconds (default: 30)
+    #[serde(default = "default_timeout")]
+    pub timeout: u64,
+}
+
+fn default_timeout() -> u64 {
+    30
+}
+
+impl HooksSpec {
+    /// Check if this plugin has any hooks
+    pub fn has_hooks(&self) -> bool {
+        !self.pre_tool_use.is_empty()
+            || !self.post_tool_use.is_empty()
+            || !self.stop.is_empty()
+            || !self.session_start.is_empty()
+            || !self.session_end.is_empty()
+            || !self.subagent_stop.is_empty()
+    }
+
+    /// Get scripts for a given event type
+    pub fn scripts_for_event(&self, event: &str) -> &[HookScript] {
+        match event {
+            "PreToolUse" => &self.pre_tool_use,
+            "PostToolUse" => &self.post_tool_use,
+            "Stop" => &self.stop,
+            "SessionStart" => &self.session_start,
+            "SessionEnd" => &self.session_end,
+            "SubagentStop" => &self.subagent_stop,
+            _ => &[],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -194,8 +247,11 @@ consumes:
     optional: true
 
 hooks:
-  pre_tool_use: true
-  stop: true
+  PreToolUse:
+    - script: hooks/validate.py
+      matcher: Bash
+  Stop:
+    - script: hooks/capture.py
 
 build:
   type: cargo
@@ -220,9 +276,11 @@ build:
         assert_eq!(manifest.plugin.license, Some("MIT".to_string()));
         assert!(manifest.provides.contains_key("memory"));
         assert!(manifest.consumes.contains_key("config"));
-        assert!(manifest.hooks.pre_tool_use);
-        assert!(manifest.hooks.stop);
-        assert!(!manifest.hooks.post_tool_use);
+        assert_eq!(manifest.hooks.pre_tool_use.len(), 1);
+        assert_eq!(manifest.hooks.pre_tool_use[0].script, "hooks/validate.py");
+        assert_eq!(manifest.hooks.pre_tool_use[0].matcher, Some("Bash".to_string()));
+        assert_eq!(manifest.hooks.stop.len(), 1);
+        assert!(manifest.hooks.post_tool_use.is_empty());
         assert!(matches!(manifest.build.r#type, BuildType::Cargo));
     }
 
@@ -241,11 +299,12 @@ build:
     #[test]
     fn test_default_hooks_spec() {
         let hooks = HooksSpec::default();
-        assert!(!hooks.pre_tool_use);
-        assert!(!hooks.post_tool_use);
-        assert!(!hooks.stop);
-        assert!(!hooks.session_start);
-        assert!(!hooks.session_end);
+        assert!(hooks.pre_tool_use.is_empty());
+        assert!(hooks.post_tool_use.is_empty());
+        assert!(hooks.stop.is_empty());
+        assert!(hooks.session_start.is_empty());
+        assert!(hooks.session_end.is_empty());
+        assert!(!hooks.has_hooks());
     }
 
     #[test]
