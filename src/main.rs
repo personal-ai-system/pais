@@ -5,12 +5,14 @@ use std::fs;
 use std::path::PathBuf;
 
 mod agent;
+mod architecture;
 mod cli;
 mod commands;
 mod config;
 mod contract;
 mod history;
 mod hook;
+mod migrate;
 mod observability;
 mod plugin;
 mod skill;
@@ -65,6 +67,7 @@ fn run(cli: Cli, config: Config) -> Result<()> {
         Commands::Run { plugin, action, args } => commands::run::run(&plugin, &action, &args, &config),
         Commands::Status { format } => commands::status::run(cli::OutputFormat::resolve(format), &config),
         Commands::Sync { dry_run, clean } => commands::sync::run(dry_run, clean, &config),
+        Commands::Upgrade { dry_run, status } => commands::upgrade::run(dry_run, status, &config),
         Commands::Completions { shell } => commands::completions::run(shell),
     }
 }

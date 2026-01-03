@@ -8,6 +8,7 @@ use crate::cli::HookAction;
 use crate::config::Config;
 use crate::hook::history::HistoryHandler;
 use crate::hook::security::SecurityValidator;
+use crate::hook::ui::UiHandler;
 use crate::hook::{HookEvent, HookHandler, HookResult};
 use crate::observability::EventEmitter;
 
@@ -54,10 +55,12 @@ fn dispatch(event: &str, payload: Option<&str>, config: &Config) -> Result<()> {
     // Build handlers list
     let security_enabled = config.hooks.security_enabled;
     let history_enabled = config.hooks.history_enabled;
+    let ui_enabled = config.hooks.ui_enabled;
 
     let handlers: Vec<Box<dyn HookHandler>> = vec![
         Box::new(SecurityValidator::new(security_enabled).with_log_path(history_path.clone())),
         Box::new(HistoryHandler::new(history_enabled, history_path)),
+        Box::new(UiHandler::new(ui_enabled)),
     ];
 
     // Run all handlers for this event

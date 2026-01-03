@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub mod dispatch;
 pub mod history;
 pub mod security;
+pub mod ui;
 
 /// Hook event types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]

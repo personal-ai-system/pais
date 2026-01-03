@@ -333,45 +333,49 @@ src/cli.rs                             # AgentAction enum
 
 ---
 
-## Phase 6: Quality of Life (Polish)
+## Phase 6: Quality of Life (Polish) ✅
 
 **Goal:** Small features that improve daily usage.
 
-### 6.1 Tab Title Updates
+### 6.1 Tab Title Updates ✅
 
-**Tasks:**
-- [ ] Implement `UserPromptSubmit` hook to update terminal tab title
-- [ ] Extract task context from user prompt
-- [ ] Format: `🤖 [task summary]`
+**Implementation:**
+- `UserPromptSubmit` hook updates terminal tab title using OSC escape sequences
+- Extracts task summary from user prompt (strips common prefixes, truncates)
+- Format: `🤖 [task summary]` in terminal tab
 
-**Files to modify:**
+**Files created/modified:**
 ```
-src/hook/ui.rs                         # New - UI-related hooks
-.claude/settings.json                  # Add UserPromptSubmit hook
-```
-
-### 6.2 Architecture Tracking
-
-**Tasks:**
-- [ ] Auto-generate `~/.config/pais/ARCHITECTURE.md`:
-  - Installed skills
-  - Configured agents
-  - Hook status
-  - Last sync time
-- [ ] Update on `pais sync` and `pais skill index`
-
-**Files to create/modify:**
-```
-src/commands/sync.rs                   # Modify - generate architecture doc
-src/architecture.rs                    # New - architecture doc generation
+src/hook/ui.rs                         # UI hook handler
+.claude/settings.json                  # Added UserPromptSubmit hook
+src/config.rs                          # Added ui_enabled config
 ```
 
-### 6.3 Upgrade/Migration System
+### 6.2 Architecture Tracking ✅
 
-**Tasks:**
-- [ ] Version tracking for PAIS config
-- [ ] Migration scripts for config changes
-- [ ] `pais upgrade` command to apply migrations
+**Implementation:**
+- Auto-generates `~/.config/pais/architecture.md` on `pais sync`
+- Shows: Skills (with tier), Agents (with traits), Hooks, Observability, Paths
+
+**Files created/modified:**
+```
+src/architecture.rs                    # Architecture doc generation
+src/commands/sync.rs                   # Calls architecture generation
+```
+
+### 6.3 Upgrade/Migration System ✅
+
+**Implementation:**
+- Version tracking via git tags in `~/.config/pais` (e.g., `v1`, `v2`)
+- Migration trait for versioned config upgrades
+- `pais upgrade` command with `--status` and `--dry-run` flags
+
+**Files created/modified:**
+```
+src/migrate.rs                         # Migration framework (git tag based)
+src/commands/upgrade.rs                # Upgrade CLI command
+src/cli.rs                             # Added Upgrade command
+```
 
 ---
 

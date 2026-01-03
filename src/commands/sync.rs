@@ -1,11 +1,13 @@
 //! Sync skills to Claude Code
 //!
 //! Syncs PAIS skills to ~/.claude/skills/ using symlinks so Claude Code can discover them.
+//! Also generates ARCHITECTURE.md after sync.
 
 use eyre::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::architecture;
 use crate::config::Config;
 use crate::skill::loader::{discover_plugin_skills, discover_simple_skills};
 use crate::skill::parser::has_skill_md;
@@ -77,6 +79,18 @@ fn sync_skills(claude_skills_dir: &Path, dry_run: bool, config: &Config) -> Resu
         }
     }
 
+    // Generate ARCHITECTURE.md
+    if !dry_run {
+        match architecture::write_architecture_doc(config) {
+            Ok(path) => {
+                log::info!("Generated ARCHITECTURE.md: {}", path.display());
+            }
+            Err(e) => {
+                log::warn!("Failed to generate ARCHITECTURE.md: {}", e);
+            }
+        }
+    }
+
     // Summary
     println!();
     if dry_run {
@@ -89,6 +103,10 @@ fn sync_skills(claude_skills_dir: &Path, dry_run: bool, config: &Config) -> Resu
         println!("  Already synced: {} skill(s)", skipped_count);
         println!();
         println!("Claude Code skills directory: {}", claude_skills_dir.display());
+        println!(
+            "Architecture doc: {}",
+            Config::pais_dir().join("architecture.md").display()
+        );
     }
 
     Ok(())

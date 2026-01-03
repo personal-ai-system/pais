@@ -175,6 +175,17 @@ pub enum Commands {
         clean: bool,
     },
 
+    /// Upgrade PAIS configuration (run migrations)
+    Upgrade {
+        /// Show what would happen without making changes
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Show current version info only
+        #[arg(long)]
+        status: bool,
+    },
+
     /// Generate shell completions
     Completions {
         /// Shell to generate completions for
