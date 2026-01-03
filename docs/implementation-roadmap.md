@@ -496,9 +496,6 @@ environment:
     otto:
       github: otto-rs/otto
       description: "CI runner, task automation"
-    leeks:
-      github: scottidler/leeks
-      description: "Secret detection"
     clone:
       github: scottidler/clone
       description: "Git clone to repos-dir/{org}/{repo}"
@@ -544,7 +541,6 @@ Fallback to standard tools if modern ones unavailable.
 
 ### Custom Tools
 - `otto` - CI/task runner (otto-rs/otto) ✓
-- `leeks` - secret scanning (scottidler/leeks) ✓
 - `clone` - smart git clone (scottidler/clone) ✓
 ```
 
@@ -567,8 +563,6 @@ Tools:
   ✓ fd (fd 9.0.0)
   ✓ eza (eza 0.18.0)
   ✓ otto (otto 0.1.0)
-  ✗ leeks (not found)
-    Install: cargo install --git https://github.com/scottidler/leeks
 ```
 
 **Files modified:**

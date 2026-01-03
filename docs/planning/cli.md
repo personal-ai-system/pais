@@ -553,8 +553,8 @@ language = "python"
 log_level = "info"
 
 [registries]
-core = "https://github.com/scottidler/pais/registry/plugins.toml"
-# work = "https://github.com/your-company/pais-plugins/registry.toml"
+core = "https://github.com/scottidler/pais/registry/plugins.yaml"
+# work = "https://github.com/your-company/pais-plugins/registry.yaml"
 
 [hooks]
 # Global hook configuration

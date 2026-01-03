@@ -208,7 +208,7 @@ my-plugin/
 │   ├── basic.md
 │   └── advanced.md
 ├── config/
-│   └── defaults.toml     # Default configuration
+│   └── defaults.yaml     # Default configuration
 └── tests/
     ├── test_plugin.py
     └── fixtures/
@@ -718,7 +718,7 @@ pais plugin install ./pais-plugins/my-skill
 Add to a registry:
 
 ```toml
-# registry/plugins.toml
+# registry/plugins.yaml
 
 [plugins.my-skill]
 source = "github.com/your-company/pais-plugins/my-skill"

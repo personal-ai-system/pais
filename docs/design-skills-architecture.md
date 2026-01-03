@@ -67,7 +67,7 @@ This directory **is a git repo** — trackable like dotfiles.
 │   └── decisions/
 │
 ├── registries/                    # Cached registries (GITIGNORED)
-│   └── core.toml
+│   └── core.yaml
 │
 └── .env                           # Secrets (GITIGNORED)
 ```
@@ -111,7 +111,7 @@ For sharing skills about tools you don't control:
 ```
 scottidler/pais-skills/
 ├── README.md
-├── registry.toml                  # Optional: for discovery
+├── registry.yaml                  # Optional: for discovery
 └── skills/
     ├── terraform/
     │   └── SKILL.md
@@ -448,7 +448,7 @@ mkdir -p skills/terraform
 cp ~/.config/pais/skills/terraform/SKILL.md skills/terraform/
 
 # Create registry for discovery
-cat > registry.toml << 'EOF'
+cat > registry.yaml << 'EOF'
 [registry]
 name = "scottidler-skills"
 description = "Scott's PAIS skills"
@@ -468,7 +468,7 @@ git push origin main
 
 **Teammate installs:**
 ```bash
-pais registry add scottidler https://raw.githubusercontent.com/scottidler/pais-skills/main/registry.toml
+pais registry add scottidler https://raw.githubusercontent.com/scottidler/pais-skills/main/registry.yaml
 pais skill install terraform
 ```
 
@@ -569,7 +569,7 @@ pais/
 │       ├── plugin.yaml
 │       └── SKILL.md
 ├── registry/
-│   └── plugins.toml               # Points to examples only
+│   └── plugins.yaml               # Points to examples only
 ├── docs/
 │   ├── design-skills-architecture.md  # This document
 │   └── ...

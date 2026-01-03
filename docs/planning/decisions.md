@@ -335,7 +335,7 @@ How is configuration managed across core, plugins, and users?
 ### Decision
 **Three-level configuration hierarchy:**
 1. Plugin defaults (in plugin.yaml)
-2. User overrides (in plugin config.toml)
+2. User overrides (in plugin config.yaml)
 3. Environment variables (for secrets)
 
 ### Rationale
@@ -362,7 +362,7 @@ How is configuration managed across core, plugins, and users?
 ├── .env                         # Secrets (all plugins)
 └── plugins/
     └── jira/
-        └── config.toml          # User overrides for jira plugin
+        └── config.yaml          # User overrides for jira plugin
 ```
 
 ---

@@ -88,8 +88,8 @@ PAIS is a **plugin layer** on top of Claude Code's native primitives. It does no
 │   ├── decisions/YYYY-MM/
 │   └── raw/YYYY-MM/
 └── registries/                      # Plugin registries
-    ├── core.toml                    # From PAIS repo
-    └── work.toml                    # Team private registry
+    ├── core.yaml                    # From PAIS repo
+    └── work.yaml                    # Team private registry
 ```
 
 ---
@@ -437,8 +437,8 @@ language = "python"
 log_level = "info"
 
 [registries]
-core = "https://github.com/scottidler/pais/registry/plugins.toml"
-# work = "https://github.com/your-company/pais-plugins/registry.toml"
+core = "https://github.com/scottidler/pais/registry/plugins.yaml"
+# work = "https://github.com/your-company/pais-plugins/registry.yaml"
 ```
 
 ### Secrets (`.env`)
@@ -458,7 +458,7 @@ ANTHROPIC_API_KEY=xxx
 Each plugin reads config from its manifest defaults + user overrides:
 
 ```toml
-# ~/.config/pais/plugins/incident/config.toml (user overrides)
+# ~/.config/pais/plugins/incident/config.yaml (user overrides)
 escalation_threshold_minutes = 15
 default_severity = "SEV-2"
 ```

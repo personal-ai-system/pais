@@ -1,0 +1,40 @@
+# PAIS Configuration (development/example)
+# Copy to ~/.config/pais/pais.yaml for personal use
+
+paths:
+  plugins: ~/.config/pais/plugins
+  skills: ~/.config/pais/skills
+  history: ~/.config/pais/history
+  registries: ~/.config/pais/registries
+
+registries:
+  core: https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.yaml
+
+hooks:
+  security-enabled: true
+  history-enabled: true
+  ui-enabled: true
+
+observability:
+  enabled: true
+  sinks:
+    - file
+
+environment:
+  repos-dir: ~/repos/
+  
+  tool-preferences:
+    ls: eza
+    tree: eza --tree
+    grep: rg
+    find: fd
+    cat: bat
+  
+  tools:
+    otto:
+      github: otto-rs/otto
+      description: CI runner, task automation
+    clone:
+      github: scottidler/clone
+      description: Git clone to repos-dir/{org}/{repo}
+

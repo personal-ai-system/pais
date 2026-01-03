@@ -148,7 +148,7 @@ language = "python"
 log_level = "info"
 
 [registries]
-core = "https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.toml"
+core = "https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.yaml"
 
 [hooks]
 security_enabled = true

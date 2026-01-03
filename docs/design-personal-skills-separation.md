@@ -45,7 +45,7 @@ pais/
 │   ├── hello-world/        # Example Python plugin
 │   └── hello-rust/         # Example Rust plugin
 ├── registry/
-│   └── plugins.toml        # Core registry (examples only)
+│   └── plugins.yaml        # Core registry (examples only)
 ├── docs/
 └── CLAUDE.md
 ```
@@ -67,7 +67,7 @@ pais-skills/
 │   ├── rkvr/
 │   └── whitespace/
 ├── registry/
-│   └── plugins.toml        # Personal registry
+│   └── plugins.yaml        # Personal registry
 └── README.md
 ```
 
@@ -76,7 +76,7 @@ pais-skills/
 ### Core Registry (in `pais`)
 
 ```toml
-# registry/plugins.toml
+# registry/plugins.yaml
 [registry]
 name = "pais-core"
 description = "Core PAIS examples"
@@ -94,7 +94,7 @@ name = "hello-rust"
 ### Personal Registry (in `pais-skills`)
 
 ```toml
-# registry/plugins.toml
+# registry/plugins.yaml
 [registry]
 name = "scottidler-skills"
 description = "Scott's personal PAIS skills"
@@ -116,10 +116,10 @@ path = "plugins/rust-coder"
 ```bash
 # Core is already configured
 pais registry list
-# → core: https://...scottidler/pais/main/registry/plugins.toml
+# → core: https://...scottidler/pais/main/registry/plugins.yaml
 
 # Add personal registry
-pais registry add personal https://raw.githubusercontent.com/scottidler/pais-skills/main/registry/plugins.toml
+pais registry add personal https://raw.githubusercontent.com/scottidler/pais-skills/main/registry/plugins.yaml
 
 # Install personal skills
 pais plugin install rust-coder
@@ -137,14 +137,14 @@ pais init
 # Fork pais-skills or create from scratch
 
 # Add their personal registry
-pais registry add personal https://raw.githubusercontent.com/teammate/pais-skills/main/registry/plugins.toml
+pais registry add personal https://raw.githubusercontent.com/teammate/pais-skills/main/registry/plugins.yaml
 ```
 
 ### For Teams (Shared Skills)
 
 ```bash
 # Team maintains a shared skills repo
-pais registry add mycompany https://raw.githubusercontent.com/mycompany/pais-skills/main/registry/plugins.toml
+pais registry add mycompany https://raw.githubusercontent.com/mycompany/pais-skills/main/registry/plugins.yaml
 
 # Team members install shared skills
 pais plugin install mycompany-runbooks
@@ -175,8 +175,8 @@ pais plugin install mycompany-oncall
    ```
 
 3. **Update registries**
-   - Remove personal skills from `pais/registry/plugins.toml`
-   - Create `pais-skills/registry/plugins.toml` with moved skills
+   - Remove personal skills from `pais/registry/plugins.yaml`
+   - Create `pais-skills/registry/plugins.yaml` with moved skills
 
 4. **Update default config**
    - Remove `scottidler-skills` from default `pais.yaml`

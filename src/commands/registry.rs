@@ -127,7 +127,7 @@ fn remove(name: &str, config: &Config) -> Result<()> {
 
     // Remove cached listing if exists
     let registries_dir = Config::expand_path(&config.paths.registries);
-    let cache_file = registries_dir.join(format!("{}.toml", name));
+    let cache_file = registries_dir.join(format!("{}.yaml", name));
     if cache_file.exists() {
         fs::remove_file(&cache_file).ok();
     }
@@ -167,7 +167,7 @@ fn update(name: Option<&str>, config: &Config) -> Result<()> {
             let path = url.trim_start_matches("file://");
             if std::path::Path::new(path).exists() {
                 let content = fs::read_to_string(path).context("Failed to read local registry")?;
-                let cache_file = registries_dir.join(format!("{}.toml", reg_name));
+                let cache_file = registries_dir.join(format!("{}.yaml", reg_name));
                 fs::write(&cache_file, content).context("Failed to cache registry")?;
                 println!("  {} Cached from local file", "✓".green());
             } else {
@@ -177,7 +177,7 @@ fn update(name: Option<&str>, config: &Config) -> Result<()> {
             // Remote URL - fetch with ureq
             match fetch_remote_registry(url) {
                 Ok(content) => {
-                    let cache_file = registries_dir.join(format!("{}.toml", reg_name));
+                    let cache_file = registries_dir.join(format!("{}.yaml", reg_name));
                     fs::write(&cache_file, &content).context("Failed to cache registry")?;
                     println!("  {} Fetched and cached", "✓".green());
                 }
@@ -326,7 +326,7 @@ fn search(query: &str, format: OutputFormat, config: &Config) -> Result<()> {
 
 fn show(name: &str, format: OutputFormat, config: &Config) -> Result<()> {
     let registries_dir = Config::expand_path(&config.paths.registries);
-    let cache_file = registries_dir.join(format!("{}.toml", name));
+    let cache_file = registries_dir.join(format!("{}.yaml", name));
 
     if !cache_file.exists() {
         // Check if registry is configured but not cached
