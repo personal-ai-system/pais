@@ -430,6 +430,48 @@ hooks:
 
 ---
 
+## Phase 8: System Status (Utility) ✅
+
+**Goal:** Quick system health check and overview.
+
+### 8.1 `pais status` Command ✅
+
+**Implementation:**
+- Shows PAIS version and directory paths
+- Lists installed plugins with language/hooks info
+- Lists skills with tier (core/deferred) and source (simple/plugin)
+- Lists agents with traits and history routing
+- Shows hook status (security, history, UI)
+- Shows observability status (enabled, sinks)
+- Shows history categories with entry counts and latest timestamp
+- Shows configured registries with cache status
+- Supports `--format text|json|yaml` output
+
+**Files created/modified:**
+```
+src/commands/status.rs    # Enhanced status command
+```
+
+---
+
+## Phase 9: Plugin Execution (Utility)
+
+**Goal:** Direct plugin invocation for testing and scripting.
+
+### 9.1 `pais run` Command (Existing)
+
+**Already implemented:**
+- `pais run <plugin> <action> [args...]` - Execute plugin actions
+- Supports Python and Rust plugins
+- Auto-builds Rust plugins if needed
+
+**Files:**
+```
+src/commands/run.rs    # Already exists
+```
+
+---
+
 ## Phase Summary
 
 | Phase | Focus | Priority |
@@ -441,8 +483,10 @@ hooks:
 | 5 | Agent System | Low |
 | 6 | Quality of Life | Low |
 | 7 | Plugin System | Low |
+| 8 | System Status | Low |
+| 9 | Plugin Execution | Low |
 
-**Recommended order:** Phase 1 → Phase 2 → Phase 3 → Phase 6 → Phase 4 → Phase 5 → Phase 7
+**Recommended order:** Phase 1 → Phase 2 → Phase 3 → Phase 6 → Phase 4 → Phase 5 → Phase 7 → Phase 8 → Phase 9
 
 ---
 
