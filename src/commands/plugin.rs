@@ -163,7 +163,7 @@ fn install(source: &str, dev: bool, force: bool, config: &Config) -> Result<()> 
     } else {
         eyre::bail!(
             "Source not found: {}. Use a local path or a plugin name from registry.\n\
-             Hint: Run 'paii registry search {}' to find available plugins.",
+             Hint: Run 'pais registry search {}' to find available plugins.",
             source,
             source
         );
@@ -239,7 +239,7 @@ fn install_from_registry(name: &str, force: bool, config: &Config) -> Result<()>
     let registries_dir = Config::expand_path(&config.paths.registries);
 
     if !registries_dir.exists() {
-        eyre::bail!("No cached registries. Run 'paii registry update' first.");
+        eyre::bail!("No cached registries. Run 'pais registry update' first.");
     }
 
     let mut found_plugin: Option<(String, RegistryPlugin)> = None;
@@ -275,7 +275,7 @@ fn install_from_registry(name: &str, force: bool, config: &Config) -> Result<()>
     let (registry_name, plugin) = found_plugin.ok_or_else(|| {
         eyre::eyre!(
             "Plugin '{}' not found in any registry.\n\
-             Hint: Run 'paii registry search {}' to find similar plugins.",
+             Hint: Run 'pais registry search {}' to find similar plugins.",
             name,
             name
         )
@@ -610,7 +610,7 @@ fn new(
     } else {
         println!("    3. Implement your plugin in src/main.rs");
     }
-    println!("    4. paii plugin install --dev {}", output_path.display());
+    println!("    4. pais plugin install --dev {}", output_path.display());
 
     Ok(())
 }
@@ -620,12 +620,12 @@ fn generate_manifest(name: &str, language: &str, plugin_type: &str) -> String {
         r#"[plugin]
 name = "{name}"
 version = "0.1.0"
-description = "A PAII {plugin_type} plugin"
+description = "A PAIS {plugin_type} plugin"
 authors = []
 language = "{language}"
 license = "MIT"
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 # Contracts this plugin provides
@@ -660,7 +660,7 @@ fn generate_python_main(name: &str) -> String {
     format!(
         r#"#!/usr/bin/env python3
 """
-{name} - A PAII plugin
+{name} - A PAIS plugin
 """
 import json
 import sys
@@ -694,7 +694,7 @@ if __name__ == "__main__":
 
 fn generate_rust_main(name: &str) -> String {
     format!(
-        r##"//! {name} - A PAII plugin
+        r##"//! {name} - A PAIS plugin
 
 use std::env;
 
@@ -748,7 +748,7 @@ fn generate_pyproject_toml(name: &str) -> String {
         r#"[project]
 name = "{name}"
 version = "0.1.0"
-description = "A PAII plugin"
+description = "A PAIS plugin"
 requires-python = ">=3.10"
 dependencies = []
 
@@ -782,7 +782,7 @@ Greet someone by name.
 
 **Example:**
 ```
-paii run {name} greet Alice
+pais run {name} greet Alice
 ```
 
 ### version
@@ -801,20 +801,20 @@ fn generate_readme(name: &str, plugin_type: &str, language: &str) -> String {
     format!(
         r#"# {name}
 
-A PAII {plugin_type} plugin written in {language}.
+A PAIS {plugin_type} plugin written in {language}.
 
 ## Installation
 
 ```bash
-paii plugin install --dev .
+pais plugin install --dev .
 ```
 
 ## Usage
 
 ```bash
-paii run {name} greet
-paii run {name} greet Alice
-paii run {name} version
+pais run {name} greet
+pais run {name} greet Alice
+pais run {name} version
 ```
 
 ## Development

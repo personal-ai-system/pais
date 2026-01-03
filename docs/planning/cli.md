@@ -1,15 +1,15 @@
-# PAII CLI Reference
+# PAIS CLI Reference
 
-> Command reference for the `paii` CLI tool (Rust).
+> Command reference for the `pais` CLI tool (Rust).
 
 ---
 
 ## Overview
 
-The `paii` CLI is the main interface for managing plugins, dispatching hooks, and querying history. It's built in Rust for speed and reliability.
+The `pais` CLI is the main interface for managing plugins, dispatching hooks, and querying history. It's built in Rust for speed and reliability.
 
 ```bash
-paii [OPTIONS] <COMMAND>
+pais [OPTIONS] <COMMAND>
 ```
 
 ---
@@ -18,7 +18,7 @@ paii [OPTIONS] <COMMAND>
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--config <PATH>` | `-c` | Path to paii.toml (default: `~/.config/paii/paii.toml`) |
+| `--config <PATH>` | `-c` | Path to pais.toml (default: `~/.config/pais/pais.toml`) |
 | `--verbose` | `-v` | Increase log verbosity (can be repeated: -vv, -vvv) |
 | `--quiet` | `-q` | Suppress non-error output |
 | `--help` | `-h` | Print help |
@@ -28,16 +28,16 @@ paii [OPTIONS] <COMMAND>
 
 ## Commands
 
-### `paii plugin`
+### `pais plugin`
 
 Manage plugins.
 
-#### `paii plugin list`
+#### `pais plugin list`
 
 List installed plugins.
 
 ```bash
-paii plugin list [OPTIONS]
+pais plugin list [OPTIONS]
 
 Options:
   --json           Output as JSON
@@ -64,12 +64,12 @@ Installed plugins:
     consumes: MemoryProvider, IntegrationProvider[pagerduty, slack] (optional)
 ```
 
-#### `paii plugin install`
+#### `pais plugin install`
 
 Install a plugin.
 
 ```bash
-paii plugin install <SOURCE> [OPTIONS]
+pais plugin install <SOURCE> [OPTIONS]
 
 Arguments:
   <SOURCE>   Plugin source (name, git URL, or local path)
@@ -85,7 +85,7 @@ Options:
 | Type | Example | Description |
 |------|---------|-------------|
 | Name | `history` | Install from core repo |
-| Git URL | `github.com/team/paii-plugins/jira` | Clone from git |
+| Git URL | `github.com/team/pais-plugins/jira` | Clone from git |
 | Local | `./my-plugin` | Install from local path |
 | Registry | `datadog` | Lookup in registries |
 
@@ -93,25 +93,25 @@ Options:
 
 ```bash
 # Install from core
-paii plugin install hooks
-paii plugin install history
+pais plugin install hooks
+pais plugin install history
 
 # Install from git
-paii plugin install github.com/your-company/paii-work-plugins/jira
+pais plugin install github.com/your-company/pais-work-plugins/jira
 
 # Install from local path (development)
-paii plugin install ./incident --dev
+pais plugin install ./incident --dev
 
 # Force reinstall
-paii plugin install history --force
+pais plugin install history --force
 ```
 
-#### `paii plugin remove`
+#### `pais plugin remove`
 
 Remove a plugin.
 
 ```bash
-paii plugin remove <NAME> [OPTIONS]
+pais plugin remove <NAME> [OPTIONS]
 
 Arguments:
   <NAME>     Plugin name
@@ -120,23 +120,23 @@ Options:
   --force    Remove even if other plugins depend on it
 ```
 
-#### `paii plugin update`
+#### `pais plugin update`
 
 Update a plugin to the latest version.
 
 ```bash
-paii plugin update <NAME>
+pais plugin update <NAME>
 
 Arguments:
   <NAME>     Plugin name (or "all" to update all)
 ```
 
-#### `paii plugin info`
+#### `pais plugin info`
 
 Show detailed plugin information.
 
 ```bash
-paii plugin info <NAME>
+pais plugin info <NAME>
 
 Arguments:
   <NAME>     Plugin name
@@ -149,7 +149,7 @@ name: incident
 version: 1.0.0
 description: Incident response workflows
 language: python
-path: ~/.config/paii/plugins/incident
+path: ~/.config/pais/plugins/incident
 
 provides:
   - SkillProvider[incident]
@@ -175,12 +175,12 @@ config:
   default_severity: SEV-2
 ```
 
-#### `paii plugin new`
+#### `pais plugin new`
 
 Scaffold a new plugin.
 
 ```bash
-paii plugin new <NAME> [OPTIONS]
+pais plugin new <NAME> [OPTIONS]
 
 Arguments:
   <NAME>     Plugin name
@@ -194,7 +194,7 @@ Options:
 **Example:**
 
 ```bash
-paii plugin new oncall --type skill --language python
+pais plugin new oncall --type skill --language python
 ```
 
 Creates:
@@ -212,12 +212,12 @@ oncall/
     └── test_plugin.py
 ```
 
-#### `paii plugin verify`
+#### `pais plugin verify`
 
 Verify a plugin is correctly installed.
 
 ```bash
-paii plugin verify <NAME>
+pais plugin verify <NAME>
 
 Arguments:
   <NAME>     Plugin name
@@ -225,16 +225,16 @@ Arguments:
 
 ---
 
-### `paii hook`
+### `pais hook`
 
 Hook event handling (used by Claude Code integration).
 
-#### `paii hook dispatch`
+#### `pais hook dispatch`
 
 Dispatch a hook event to handlers.
 
 ```bash
-paii hook dispatch <EVENT> [OPTIONS]
+pais hook dispatch <EVENT> [OPTIONS]
 
 Arguments:
   <EVENT>    Event type: pre-tool-use, post-tool-use, stop, session-start, etc.
@@ -260,19 +260,19 @@ Options:
       "matcher": "Bash",
       "hooks": [{
         "type": "command",
-        "command": "paii hook dispatch pre-tool-use"
+        "command": "pais hook dispatch pre-tool-use"
       }]
     }]
   }
 }
 ```
 
-#### `paii hook list`
+#### `pais hook list`
 
 List registered hook handlers.
 
 ```bash
-paii hook list [OPTIONS]
+pais hook list [OPTIONS]
 
 Options:
   --event <EVENT>   Filter by event type
@@ -280,16 +280,16 @@ Options:
 
 ---
 
-### `paii history`
+### `pais history`
 
 Query and manage history.
 
-#### `paii history query`
+#### `pais history query`
 
 Search history.
 
 ```bash
-paii history query <QUERY> [OPTIONS]
+pais history query <QUERY> [OPTIONS]
 
 Arguments:
   <QUERY>    Search query (regex)
@@ -305,36 +305,36 @@ Options:
 
 ```bash
 # Search all categories
-paii history query "authentication"
+pais history query "authentication"
 
 # Search specific category
-paii history query "database" --category incidents
+pais history query "database" --category incidents
 
 # Search recent only
-paii history query "bug" --since 2026-01-01
+pais history query "bug" --since 2026-01-01
 
 # JSON output for scripting
-paii history query "deploy" --json | jq '.[] | .path'
+pais history query "deploy" --json | jq '.[] | .path'
 ```
 
-#### `paii history recent`
+#### `pais history recent`
 
 Show recent history entries.
 
 ```bash
-paii history recent [OPTIONS]
+pais history recent [OPTIONS]
 
 Options:
   --category <CAT>   Category (default: all)
   --count <N>        Number of entries (default: 5)
 ```
 
-#### `paii history categories`
+#### `pais history categories`
 
 List available history categories.
 
 ```bash
-paii history categories
+pais history categories
 ```
 
 **Example output:**
@@ -349,38 +349,38 @@ raw         (5,678 entries)
 
 ---
 
-### `paii config`
+### `pais config`
 
 Manage configuration.
 
-#### `paii config show`
+#### `pais config show`
 
 Show current configuration.
 
 ```bash
-paii config show [OPTIONS]
+pais config show [OPTIONS]
 
 Options:
   --json      Output as JSON
 ```
 
-#### `paii config get`
+#### `pais config get`
 
 Get a configuration value.
 
 ```bash
-paii config get <KEY>
+pais config get <KEY>
 
 Arguments:
   <KEY>      Configuration key (dot notation: paths.history)
 ```
 
-#### `paii config set`
+#### `pais config set`
 
 Set a configuration value.
 
 ```bash
-paii config set <KEY> <VALUE>
+pais config set <KEY> <VALUE>
 
 Arguments:
   <KEY>      Configuration key
@@ -389,47 +389,47 @@ Arguments:
 
 ---
 
-### `paii registry`
+### `pais registry`
 
 Manage plugin registries.
 
-#### `paii registry list`
+#### `pais registry list`
 
 List configured registries.
 
 ```bash
-paii registry list
+pais registry list
 ```
 
-#### `paii registry add`
+#### `pais registry add`
 
 Add a registry.
 
 ```bash
-paii registry add <NAME> <URL>
+pais registry add <NAME> <URL>
 
 Arguments:
   <NAME>     Registry name
   <URL>      Registry URL (git repo or direct URL)
 ```
 
-#### `paii registry remove`
+#### `pais registry remove`
 
 Remove a registry.
 
 ```bash
-paii registry remove <NAME>
+pais registry remove <NAME>
 
 Arguments:
   <NAME>     Registry name
 ```
 
-#### `paii registry update`
+#### `pais registry update`
 
 Update registry plugin listings.
 
 ```bash
-paii registry update [NAME]
+pais registry update [NAME]
 
 Arguments:
   [NAME]     Registry name (or update all if omitted)
@@ -437,12 +437,12 @@ Arguments:
 
 ---
 
-### `paii run`
+### `pais run`
 
 Run a plugin action directly.
 
 ```bash
-paii run <PLUGIN> <ACTION> [ARGS...]
+pais run <PLUGIN> <ACTION> [ARGS...]
 
 Arguments:
   <PLUGIN>   Plugin name
@@ -457,23 +457,23 @@ Options:
 
 ```bash
 # Query Jira
-paii run jira get_issue --id PROJ-123
+pais run jira get_issue --id PROJ-123
 
 # Acknowledge PagerDuty incident
-paii run pagerduty acknowledge --id P123456
+pais run pagerduty acknowledge --id P123456
 
 # Search history
-paii run history query --category incidents --query "database"
+pais run history query --category incidents --query "database"
 ```
 
 ---
 
-### `paii status`
+### `pais status`
 
 Show system status.
 
 ```bash
-paii status [OPTIONS]
+pais status [OPTIONS]
 
 Options:
   --json      Output as JSON
@@ -482,12 +482,12 @@ Options:
 **Example output:**
 
 ```
-PAII Status
+PAIS Status
 
   Version:    0.1.0
-  Config:     ~/.config/paii/paii.toml
-  Plugins:    ~/.config/paii/plugins/
-  History:    ~/.config/paii/history/
+  Config:     ~/.config/pais/pais.toml
+  Plugins:    ~/.config/pais/plugins/
+  History:    ~/.config/pais/history/
 
 Plugins (5 installed):
   ✓ hooks       1.0.0   [rust]
@@ -515,10 +515,10 @@ History:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PAII_DIR` | Base directory for PAII | `~/.config/paii` |
-| `PAII_CONFIG` | Path to paii.toml | `$PAII_DIR/paii.toml` |
-| `PAII_LOG_LEVEL` | Log level (trace, debug, info, warn, error) | `info` |
-| `PAII_NO_COLOR` | Disable colored output | unset |
+| `PAIS_DIR` | Base directory for PAIS | `~/.config/pais` |
+| `PAIS_CONFIG` | Path to pais.toml | `$PAIS_DIR/pais.toml` |
+| `PAIS_LOG_LEVEL` | Log level (trace, debug, info, warn, error) | `info` |
+| `PAIS_NO_COLOR` | Disable colored output | unset |
 
 ---
 
@@ -537,24 +537,24 @@ History:
 
 ---
 
-## Configuration File (`paii.toml`)
+## Configuration File (`pais.toml`)
 
 ```toml
-[paii]
+[pais]
 version = "0.1.0"
 
 [paths]
-plugins = "~/.config/paii/plugins"
-history = "~/.config/paii/history"
-registries = "~/.config/paii/registries"
+plugins = "~/.config/pais/plugins"
+history = "~/.config/pais/history"
+registries = "~/.config/pais/registries"
 
 [defaults]
 language = "python"
 log_level = "info"
 
 [registries]
-core = "https://github.com/scottidler/paii/registry/plugins.toml"
-# work = "https://github.com/your-company/paii-plugins/registry.toml"
+core = "https://github.com/scottidler/pais/registry/plugins.toml"
+# work = "https://github.com/your-company/pais-plugins/registry.toml"
 
 [hooks]
 # Global hook configuration
@@ -570,13 +570,13 @@ Generate shell completions:
 
 ```bash
 # Bash
-paii completions bash > ~/.local/share/bash-completion/completions/paii
+pais completions bash > ~/.local/share/bash-completion/completions/pais
 
 # Zsh
-paii completions zsh > ~/.zfunc/_paii
+pais completions zsh > ~/.zfunc/_pais
 
 # Fish
-paii completions fish > ~/.config/fish/completions/paii.fish
+pais completions fish > ~/.config/fish/completions/pais.fish
 ```
 
 ---

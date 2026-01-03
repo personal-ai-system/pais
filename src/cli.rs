@@ -33,14 +33,14 @@ impl OutputFormat {
 
 #[derive(Parser)]
 #[command(
-    name = "paii",
+    name = "pais",
     about = "Personal AI Infrastructure - A modular plugin system for Claude Code",
     version = env!("GIT_DESCRIBE"),
-    after_help = "Logs are written to: ~/.local/share/paii/logs/paii.log\n\nDocumentation: https://github.com/scottidler/paii"
+    after_help = "Logs are written to: ~/.local/share/pais/logs/pais.log\n\nDocumentation: https://github.com/scottidler/pais"
 )]
 pub struct Cli {
     /// Path to config file
-    #[arg(short, long, global = true, help = "Path to paii.toml config file")]
+    #[arg(short, long, global = true, help = "Path to pais.toml config file")]
     pub config: Option<PathBuf>,
 
     /// Enable verbose output
@@ -57,9 +57,9 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Initialize PAII configuration
+    /// Initialize PAIS configuration
     Init {
-        /// Directory to initialize (defaults to ~/.config/paii)
+        /// Directory to initialize (defaults to ~/.config/pais)
         #[arg(long)]
         path: Option<PathBuf>,
 

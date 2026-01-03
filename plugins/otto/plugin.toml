@@ -6,7 +6,7 @@ authors = ["Scott Idler <scott.a.idler@gmail.com>"]
 language = "mixed"
 license = "MIT"
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 [provides]

@@ -1,4 +1,4 @@
-# PAII Planning Documentation
+# PAIS Planning Documentation
 
 > Personal AI Infrastructure — Built on Claude Code
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-PAII is a modular plugin system for Claude Code, designed for team sharing. It takes inspiration from Daniel Miessler's Kai/PAI system but reimplements the ideas with a focus on:
+PAIS is a modular plugin system for Claude Code, designed for team sharing. It takes inspiration from Daniel Miessler's Kai/PAI system but reimplements the ideas with a focus on:
 
 - **True plugin architecture** (vs. coupled packs)
 - **Python + Rust** (vs. TypeScript)
@@ -28,7 +28,7 @@ PAII is a modular plugin system for Claude Code, designed for team sharing. It t
 
 | Document | Description |
 |----------|-------------|
-| [cli.md](cli.md) | `paii` command reference |
+| [cli.md](cli.md) | `pais` command reference |
 | [plugins.md](plugins.md) | Plugin development guide |
 
 ### Context
@@ -37,7 +37,7 @@ PAII is a modular plugin system for Claude Code, designed for team sharing. It t
 |----------|-------------|
 | [use-cases.md](use-cases.md) | Real-world scenarios |
 | [decisions.md](decisions.md) | Architecture decision records |
-| [comparison.md](comparison.md) | PAII vs. Kai/PAI |
+| [comparison.md](comparison.md) | PAIS vs. Kai/PAI |
 
 ---
 
@@ -76,7 +76,7 @@ The Claude Code documentation is in `docs/claude-code/`:
 
 | Component | Language | Purpose |
 |-----------|----------|---------|
-| `paii` CLI | Rust | Plugin management, hook dispatch |
+| `pais` CLI | Rust | Plugin management, hook dispatch |
 | Foundation plugins | Rust | Security, performance-critical |
 | Integration plugins | Python | SDK access (Jira, Slack, etc.) |
 | Skill plugins | Python | Workflow logic |

@@ -1,19 +1,19 @@
 # examples/hello-rust
 
-A PAII skill plugin written in rust.
+A PAIS skill plugin written in rust.
 
 ## Installation
 
 ```bash
-paii plugin install --dev .
+pais plugin install --dev .
 ```
 
 ## Usage
 
 ```bash
-paii run examples/hello-rust greet
-paii run examples/hello-rust greet Alice
-paii run examples/hello-rust version
+pais run examples/hello-rust greet
+pais run examples/hello-rust greet Alice
+pais run examples/hello-rust version
 ```
 
 ## Development

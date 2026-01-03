@@ -22,11 +22,11 @@ fn show(format: OutputFormat, config: &Config) -> Result<()> {
             println!("{}", serde_yaml::to_string(config)?);
         }
         OutputFormat::Text => {
-            println!("{}", "PAII Configuration".bold());
+            println!("{}", "PAIS Configuration".bold());
             println!();
 
-            println!("{}:", "paii".cyan());
-            println!("  version: {}", config.paii.version);
+            println!("{}:", "pais".cyan());
+            println!("  version: {}", config.pais.version);
             println!();
 
             println!("{}:", "paths".cyan());
@@ -58,7 +58,7 @@ fn show(format: OutputFormat, config: &Config) -> Result<()> {
 fn get(key: &str, config: &Config) -> Result<()> {
     // Simple dot-notation lookup
     let value = match key {
-        "paii.version" => Some(config.paii.version.clone()),
+        "pais.version" => Some(config.pais.version.clone()),
         "paths.plugins" => Some(config.paths.plugins.display().to_string()),
         "paths.history" => Some(config.paths.history.display().to_string()),
         "paths.registries" => Some(config.paths.registries.display().to_string()),
@@ -88,7 +88,7 @@ fn set(key: &str, value: &str, config: &Config) -> Result<()> {
 
     // Update the value based on key
     match key {
-        "paii.version" => new_config.paii.version = value.to_string(),
+        "pais.version" => new_config.pais.version = value.to_string(),
         "paths.plugins" => new_config.paths.plugins = value.into(),
         "paths.history" => new_config.paths.history = value.into(),
         "paths.registries" => new_config.paths.registries = value.into(),
@@ -108,7 +108,7 @@ fn set(key: &str, value: &str, config: &Config) -> Result<()> {
     }
 
     // Write config to file
-    let config_path = Config::paii_dir().join("paii.toml");
+    let config_path = Config::pais_dir().join("pais.toml");
     fs::create_dir_all(config_path.parent().unwrap())?;
 
     let toml_str = toml::to_string_pretty(&new_config).context("Failed to serialize config")?;

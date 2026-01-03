@@ -1,4 +1,4 @@
-# PAII Vision
+# PAIS Vision
 
 > Personal AI Infrastructure — A modular plugin system for Claude Code, built for team sharing.
 
@@ -15,7 +15,7 @@ The most powerful AI setups are being built inside companies for efficiency and 
 3. **Single-user focus** — Designed for one person, not teams
 4. **TypeScript-only** — No Python or Rust options
 
-**PAII** takes the best ideas from Kai/PAI and rebuilds them as a **true plugin system** on top of Claude Code's native scaffolding.
+**PAIS** takes the best ideas from Kai/PAI and rebuilds them as a **true plugin system** on top of Claude Code's native scaffolding.
 
 ---
 
@@ -36,9 +36,9 @@ The most powerful AI setups are being built inside companies for efficiency and 
 
 ### 1. Built ON Claude Code, Not Beside It
 
-PAII is **not** a replacement for Claude Code. It's a layer on top that uses Claude Code's native primitives:
+PAIS is **not** a replacement for Claude Code. It's a layer on top that uses Claude Code's native primitives:
 
-| Claude Code Primitive | How PAII Uses It |
+| Claude Code Primitive | How PAIS Uses It |
 |----------------------|------------------|
 | **Hooks** | Event-driven automation (security, history capture) |
 | **Skills** | Capability routing via SKILL.md files |
@@ -51,9 +51,9 @@ We don't reinvent these. We compose them.
 
 ### 2. Plugins Over Packs
 
-Daniel's "packs" are coupled layers that must be installed in order. PAII uses true plugins:
+Daniel's "packs" are coupled layers that must be installed in order. PAIS uses true plugins:
 
-| Packs (Kai/PAI) | Plugins (PAII) |
+| Packs (Kai/PAI) | Plugins (PAIS) |
 |-----------------|----------------|
 | Depend on other packs | Depend on **contracts** (interfaces) |
 | Install in strict order | Install in any order |
@@ -78,7 +78,7 @@ If a consumed contract isn't available, the plugin gracefully degrades.
 
 | Component | Language | Rationale |
 |-----------|----------|-----------|
-| CLI (`paii`) | Rust | Fast, single binary, your expertise |
+| CLI (`pais`) | Rust | Fast, single binary, your expertise |
 | Hooks | Rust | Safety-critical, must never crash |
 | Skills/Plugins | Python | SDK availability, rapid iteration |
 | Performance-critical | Rust | When Python is too slow |
@@ -94,7 +94,7 @@ Every design decision asks: "Can Alice install this without affecting Bob?"
 
 ### 6. Dogfooding from Day One
 
-PAII should help build PAII. The `meta/improve` plugin tracks usage, identifies gaps, and generates new plugin scaffolding.
+PAIS should help build PAIS. The `meta/improve` plugin tracks usage, identifies gaps, and generates new plugin scaffolding.
 
 ---
 
@@ -111,7 +111,7 @@ PAII should help build PAII. The `meta/improve` plugin tracks usage, identifies 
 
 ## Success Criteria
 
-PAII is successful when:
+PAIS is successful when:
 
 1. **A new teammate can install plugins in < 5 minutes** — No complex setup
 2. **Plugins can be added/removed without side effects** — True independence
@@ -134,7 +134,7 @@ These guide all design and implementation decisions:
 5. **Self-Improvement** — System should help improve itself
 6. **Clear Thinking = Clear Prompts** — Good output requires good input
 
-### PAII-Specific (New)
+### PAIS-Specific (New)
 
 7. **Plugins Over Packs** — True independence, any install order
 8. **Contracts Over Dependencies** — Interfaces, not implementations
@@ -147,7 +147,7 @@ These guide all design and implementation decisions:
 
 ## What We're Building
 
-### Core (`paii` CLI - Rust)
+### Core (`pais` CLI - Rust)
 
 Minimal core that:
 - Discovers and loads plugins
@@ -167,7 +167,7 @@ Minimal core that:
 
 ### Distribution
 
-- **Core plugins** — In the PAII repo (blessed, maintained)
+- **Core plugins** — In the PAIS repo (blessed, maintained)
 - **Team plugins** — Private Git repos for work-specific tools
 - **Personal plugins** — Local or personal Git repos
 - **Community plugins** — Public repos, discovered via registry
@@ -207,9 +207,9 @@ Minimal core that:
 - [plugins.md](plugins.md) — Plugin development guide
 - [use-cases.md](use-cases.md) — Real-world scenarios
 - [decisions.md](decisions.md) — Architecture decision records
-- [comparison.md](comparison.md) — PAII vs. Kai/PAI
+- [comparison.md](comparison.md) — PAIS vs. Kai/PAI
 
 ---
 
-*PAII — Augment yourself, share with your team.*
+*PAIS — Augment yourself, share with your team.*
 

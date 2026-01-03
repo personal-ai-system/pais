@@ -1,4 +1,4 @@
-# PAII Contracts
+# PAIS Contracts
 
 > Interface specifications for plugin communication.
 
@@ -342,10 +342,10 @@ The `plugin.toml` manifest declares contracts:
 name = "history"
 version = "1.0.0"
 description = "File-based memory system"
-authors = ["paii-team"]
+authors = ["pais-team"]
 language = "python"
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 # Contracts this plugin PROVIDES
@@ -363,7 +363,7 @@ notifications = { contract = "NotificationProvider", optional = true }
 
 [config]
 # Configuration schema
-history_dir = { type = "string", default = "~/.config/paii/history" }
+history_dir = { type = "string", default = "~/.config/pais/history" }
 categories = { type = "array", default = ["sessions", "learnings", "incidents", "decisions"] }
 
 [hooks]
@@ -559,17 +559,17 @@ class PluginError:
     details: dict | None = None
 
 # Plugins should raise PluginError or return error dicts
-# Plugins should NEVER raise unhandled exceptions that crash PAII
+# Plugins should NEVER raise unhandled exceptions that crash PAIS
 ```
 
 ---
 
 ## Versioning and Compatibility
 
-Contracts are versioned with the PAII core:
+Contracts are versioned with the PAIS core:
 
 ```toml
-[paii]
+[pais]
 core_version = ">=0.1.0,<1.0.0"  # SemVer range
 ```
 

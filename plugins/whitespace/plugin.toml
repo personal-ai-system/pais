@@ -8,7 +8,7 @@ type = "skill"
 license = "MIT"
 tags = ["formatting", "whitespace", "lint", "cleanup"]
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 [provides]

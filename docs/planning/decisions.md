@@ -10,7 +10,7 @@
 Accepted
 
 ### Context
-We need to choose languages for PAII components. Options:
+We need to choose languages for PAIS components. Options:
 1. All TypeScript (like Kai/PAI)
 2. All Python
 3. All Rust
@@ -175,7 +175,7 @@ Plugins need to communicate. Options:
 Accepted
 
 ### Context
-How should PAII and plugins be distributed? Options:
+How should PAIS and plugins be distributed? Options:
 1. Everything in one monorepo
 2. Everything in separate repos
 3. Core + blessed plugins in monorepo, others in separate repos
@@ -204,10 +204,10 @@ How should PAII and plugins be distributed? Options:
 ### Repository Structure
 
 ```
-github.com/scottidler/paii/              # Core + foundation
-github.com/your-company/paii-work/       # Team private plugins
-github.com/scottidler/paii-personal/     # Personal plugins
-github.com/someone/paii-plugin-foo/      # Community plugin
+github.com/scottidler/pais/              # Core + foundation
+github.com/your-company/pais-work/       # Team private plugins
+github.com/scottidler/pais-personal/     # Personal plugins
+github.com/someone/pais-plugin-foo/      # Community plugin
 ```
 
 ---
@@ -294,7 +294,7 @@ TypeScript is the primary language in Kai/PAI. Should we use it?
 Accepted
 
 ### Context
-How do users interact with PAII? Options:
+How do users interact with PAIS? Options:
 1. CLI only
 2. GUI/TUI
 3. API/SDK
@@ -357,8 +357,8 @@ How is configuration managed across core, plugins, and users?
 ### Configuration Locations
 
 ```
-~/.config/paii/
-├── paii.toml                    # Global PAII config
+~/.config/pais/
+├── pais.toml                    # Global PAIS config
 ├── .env                         # Secrets (all plugins)
 └── plugins/
     └── jira/

@@ -8,7 +8,7 @@ type = "skill"
 license = "MIT"
 tags = ["files", "backup", "recovery", "safety", "rm"]
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 [provides]

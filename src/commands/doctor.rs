@@ -1,4 +1,4 @@
-//! Diagnose PAII setup issues
+//! Diagnose PAIS setup issues
 
 use colored::*;
 use eyre::Result;
@@ -8,24 +8,24 @@ use std::process::Command;
 use crate::config::Config;
 
 pub fn run(config: &Config) -> Result<()> {
-    println!("{}", "PAII Doctor".bold());
+    println!("{}", "PAIS Doctor".bold());
     println!("{}", "═".repeat(50));
     println!();
 
     let mut issues = 0;
 
-    // Check PAII directory
-    let paii_dir = Config::paii_dir();
-    if paii_dir.exists() {
-        println!("{} PAII directory: {}", "✓".green(), paii_dir.display());
+    // Check PAIS directory
+    let pais_dir = Config::pais_dir();
+    if pais_dir.exists() {
+        println!("{} PAIS directory: {}", "✓".green(), pais_dir.display());
     } else {
-        println!("{} PAII directory missing: {}", "✗".red(), paii_dir.display());
-        println!("  Run {} to create it", "paii init".cyan());
+        println!("{} PAIS directory missing: {}", "✗".red(), pais_dir.display());
+        println!("  Run {} to create it", "pais init".cyan());
         issues += 1;
     }
 
     // Check config file
-    let config_file = paii_dir.join("paii.toml");
+    let config_file = pais_dir.join("pais.toml");
     if config_file.exists() {
         println!("{} Config file: {}", "✓".green(), config_file.display());
     } else {
@@ -87,7 +87,7 @@ pub fn run(config: &Config) -> Result<()> {
             } else {
                 println!("  {} {} (not cached)", "⚠".yellow(), name);
                 println!("    URL: {}", url.dimmed());
-                println!("    Run {} to fetch", "paii registry update".cyan());
+                println!("    Run {} to fetch", "pais registry update".cyan());
             }
         }
     }

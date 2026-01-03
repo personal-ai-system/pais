@@ -6,11 +6,11 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Main PAII configuration
+/// Main PAIS configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Config {
-    pub paii: PaiiConfig,
+    pub pais: PaisConfig,
     pub paths: PathsConfig,
     pub defaults: DefaultsConfig,
     pub registries: HashMap<String, String>,
@@ -19,7 +19,7 @@ pub struct Config {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
-pub struct PaiiConfig {
+pub struct PaisConfig {
     pub version: String,
 }
 
@@ -47,26 +47,26 @@ pub struct HooksConfig {
 
 impl Default for Config {
     fn default() -> Self {
-        let paii_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("paii");
+        let pais_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("pais");
 
         Self {
-            paii: PaiiConfig::default(),
+            pais: PaisConfig::default(),
             paths: PathsConfig {
-                plugins: paii_dir.join("plugins"),
-                history: paii_dir.join("history"),
-                registries: paii_dir.join("registries"),
+                plugins: pais_dir.join("plugins"),
+                history: pais_dir.join("history"),
+                registries: pais_dir.join("registries"),
             },
             defaults: DefaultsConfig::default(),
             registries: HashMap::from([(
                 "core".to_string(),
-                "https://raw.githubusercontent.com/scottidler/paii/main/registry/plugins.toml".to_string(),
+                "https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.toml".to_string(),
             )]),
             hooks: HooksConfig::default(),
         }
     }
 }
 
-impl Default for PaiiConfig {
+impl Default for PaisConfig {
     fn default() -> Self {
         Self {
             version: env!("CARGO_PKG_VERSION").to_string(),
@@ -76,12 +76,12 @@ impl Default for PaiiConfig {
 
 impl Default for PathsConfig {
     fn default() -> Self {
-        let paii_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("paii");
+        let pais_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("pais");
 
         Self {
-            plugins: paii_dir.join("plugins"),
-            history: paii_dir.join("history"),
-            registries: paii_dir.join("registries"),
+            plugins: pais_dir.join("plugins"),
+            history: pais_dir.join("history"),
+            registries: pais_dir.join("registries"),
         }
     }
 }
@@ -112,35 +112,35 @@ impl Config {
             return Self::load_from_file(path).context(format!("Failed to load config from {}", path.display()));
         }
 
-        // Check PAII_CONFIG env var
-        if let Ok(env_path) = std::env::var("PAII_CONFIG") {
+        // Check PAIS_CONFIG env var
+        if let Ok(env_path) = std::env::var("PAIS_CONFIG") {
             let path = PathBuf::from(env_path);
             if path.exists() {
                 match Self::load_from_file(&path) {
                     Ok(config) => return Ok(config),
                     Err(e) => {
-                        log::warn!("Failed to load config from PAII_CONFIG: {}", e);
+                        log::warn!("Failed to load config from PAIS_CONFIG: {}", e);
                     }
                 }
             }
         }
 
-        // Try PAII_DIR/paii.toml
-        if let Ok(paii_dir) = std::env::var("PAII_DIR") {
-            let path = PathBuf::from(paii_dir).join("paii.toml");
+        // Try PAIS_DIR/pais.toml
+        if let Ok(pais_dir) = std::env::var("PAIS_DIR") {
+            let path = PathBuf::from(pais_dir).join("pais.toml");
             if path.exists() {
                 match Self::load_from_file(&path) {
                     Ok(config) => return Ok(config),
                     Err(e) => {
-                        log::warn!("Failed to load config from PAII_DIR: {}", e);
+                        log::warn!("Failed to load config from PAIS_DIR: {}", e);
                     }
                 }
             }
         }
 
-        // Try ~/.config/paii/paii.toml
+        // Try ~/.config/pais/pais.toml
         if let Some(config_dir) = dirs::config_dir() {
-            let path = config_dir.join("paii").join("paii.toml");
+            let path = config_dir.join("pais").join("pais.toml");
             if path.exists() {
                 match Self::load_from_file(&path) {
                     Ok(config) => return Ok(config),
@@ -151,8 +151,8 @@ impl Config {
             }
         }
 
-        // Try ./paii.toml (for development)
-        let local_config = PathBuf::from("paii.toml");
+        // Try ./pais.toml (for development)
+        let local_config = PathBuf::from("pais.toml");
         if local_config.exists() {
             match Self::load_from_file(&local_config) {
                 Ok(config) => return Ok(config),
@@ -176,11 +176,11 @@ impl Config {
         Ok(config)
     }
 
-    /// Get the PAII directory (where plugins, history, etc. live)
-    pub fn paii_dir() -> PathBuf {
-        std::env::var("PAII_DIR")
+    /// Get the PAIS directory (where plugins, history, etc. live)
+    pub fn pais_dir() -> PathBuf {
+        std::env::var("PAIS_DIR")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("paii"))
+            .unwrap_or_else(|_| dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("pais"))
     }
 
     /// Expand a path that may contain ~ or env vars
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = Config::default();
-        assert!(!config.paii.version.is_empty());
+        assert!(!config.pais.version.is_empty());
         assert_eq!(config.defaults.language, "python");
         assert_eq!(config.defaults.log_level, "info");
         assert!(config.hooks.security_enabled);
@@ -207,8 +207,8 @@ mod tests {
     }
 
     #[test]
-    fn test_default_paii_config() {
-        let config = PaiiConfig::default();
+    fn test_default_pais_config() {
+        let config = PaisConfig::default();
         assert!(!config.version.is_empty());
     }
 
@@ -246,35 +246,35 @@ mod tests {
     fn test_expand_path_with_env_var() {
         // SAFETY: Test runs single-threaded, env var is test-specific
         unsafe {
-            std::env::set_var("PAII_TEST_VAR", "/custom/path");
+            std::env::set_var("PAIS_TEST_VAR", "/custom/path");
         }
-        let path = PathBuf::from("$PAII_TEST_VAR/subdir");
+        let path = PathBuf::from("$PAIS_TEST_VAR/subdir");
         let expanded = Config::expand_path(&path);
         assert_eq!(expanded, PathBuf::from("/custom/path/subdir"));
         unsafe {
-            std::env::remove_var("PAII_TEST_VAR");
+            std::env::remove_var("PAIS_TEST_VAR");
         }
     }
 
     #[test]
-    fn test_paii_dir_default() {
-        // Just test that it returns something with "paii" in it
+    fn test_pais_dir_default() {
+        // Just test that it returns something with "pais" in it
         // Don't modify env vars to avoid test interference
-        let dir = Config::paii_dir();
-        // Either it's from PAII_DIR env or it defaults to config dir
+        let dir = Config::pais_dir();
+        // Either it's from PAIS_DIR env or it defaults to config dir
         assert!(!dir.to_string_lossy().is_empty());
     }
 
     #[test]
-    fn test_paii_dir_from_env() {
+    fn test_pais_dir_from_env() {
         // SAFETY: Test runs single-threaded, env var is test-specific
         unsafe {
-            std::env::set_var("PAII_DIR", "/custom/paii");
+            std::env::set_var("PAIS_DIR", "/custom/pais");
         }
-        let dir = Config::paii_dir();
-        assert_eq!(dir, PathBuf::from("/custom/paii"));
+        let dir = Config::pais_dir();
+        assert_eq!(dir, PathBuf::from("/custom/pais"));
         unsafe {
-            std::env::remove_var("PAII_DIR");
+            std::env::remove_var("PAIS_DIR");
         }
     }
 
@@ -283,7 +283,7 @@ mod tests {
         let config = Config::default();
         let toml_str = toml::to_string(&config).expect("Failed to serialize");
         let parsed: Config = toml::from_str(&toml_str).expect("Failed to deserialize");
-        assert_eq!(parsed.paii.version, config.paii.version);
+        assert_eq!(parsed.pais.version, config.pais.version);
         assert_eq!(parsed.defaults.language, config.defaults.language);
     }
 

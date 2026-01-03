@@ -10,7 +10,7 @@ pub struct PluginManifest {
     pub plugin: PluginInfo,
 
     #[serde(default)]
-    pub paii: PaiiRequirements,
+    pub pais: PaisRequirements,
 
     #[serde(default)]
     pub provides: HashMap<String, ProvideSpec>,
@@ -58,7 +58,7 @@ pub enum PluginLanguage {
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct PaiiRequirements {
+pub struct PaisRequirements {
     #[serde(default)]
     pub core_version: Option<String>,
 }
@@ -177,7 +177,7 @@ license = "MIT"
 repository = "https://github.com/example/plugin"
 keywords = ["test", "example"]
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 [provides.memory]

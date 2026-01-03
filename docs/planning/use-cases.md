@@ -1,6 +1,6 @@
-# PAII Use Cases
+# PAIS Use Cases
 
-> Real-world scenarios showing how PAII solves actual problems.
+> Real-world scenarios showing how PAIS solves actual problems.
 
 ---
 
@@ -14,7 +14,7 @@
 
 It's 2 AM. PagerDuty pages you. A service is returning 500 errors.
 
-#### Without PAII
+#### Without PAIS
 
 1. Acknowledge in PagerDuty (manual)
 2. Create Slack incident channel (manual)
@@ -31,7 +31,7 @@ It's 2 AM. PagerDuty pages you. A service is returning 500 errors.
 - Losing knowledge when incident ends
 - Post-mortems delayed or skipped
 
-#### With PAII
+#### With PAIS
 
 ```
 You: "incident: payments-api is returning 500s in production"
@@ -95,14 +95,14 @@ Claude:
 
 Your on-call shift is ending. You need to brief the next person.
 
-#### Without PAII
+#### Without PAIS
 
 1. Try to remember everything that happened
 2. Write up notes in Slack or email
 3. Forget half the context
 4. Next person starts cold
 
-#### With PAII
+#### With PAIS
 
 ```
 You: "generate on-call handoff for the past 24 hours"
@@ -165,7 +165,7 @@ Shall I post this to #oncall-handoff?
 
 You need to execute a database failover runbook.
 
-#### Without PAII
+#### Without PAIS
 
 1. Find the runbook in Confluence
 2. Read through the steps
@@ -173,7 +173,7 @@ You need to execute a database failover runbook.
 4. Document what you did
 5. Hope you didn't miss anything
 
-#### With PAII
+#### With PAIS
 
 ```
 You: "execute database failover runbook for primary-postgres"
@@ -491,18 +491,18 @@ Does this outline work? Would you like to:
 
 ## Meta/Dogfooding
 
-### Improving PAII
+### Improving PAIS
 
 #### Scenario
 
-PAII helps improve itself.
+PAIS helps improve itself.
 
 ```
-You: "analyze my PAII usage and suggest improvements"
+You: "analyze my PAIS usage and suggest improvements"
 
 Claude (using improve skill):
 
-📊 PAII USAGE ANALYSIS
+📊 PAIS USAGE ANALYSIS
 Period: Last 30 days
 
 PLUGIN USAGE:
@@ -551,7 +551,7 @@ Claude:
 
 📦 CREATING PLUGIN: datadog
 
-paii plugin new datadog --type integration --language python
+pais plugin new datadog --type integration --language python
 
 Created:
   datadog/

@@ -1,4 +1,4 @@
-//! hello-rust - A PAII plugin
+//! hello-rust - A PAIS plugin
 
 use std::env;
 

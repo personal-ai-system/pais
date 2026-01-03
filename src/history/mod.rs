@@ -1,7 +1,7 @@
 //! History storage and retrieval
 //!
 //! Stores session data, learnings, decisions, and insights as markdown files.
-//! Structure: ~/.config/paii/history/<category>/<date>/<id>.md
+//! Structure: ~/.config/pais/history/<category>/<date>/<id>.md
 
 use chrono::{DateTime, Local, NaiveDate};
 use eyre::{Context, Result};
@@ -364,7 +364,7 @@ mod tests {
     fn test_entry_to_markdown() {
         let entry = HistoryEntry::new("sessions", "Test Session", "This is a test")
             .with_tag("test")
-            .with_metadata("project", "paii");
+            .with_metadata("project", "pais");
 
         let md = entry.to_markdown();
         assert!(md.contains("title: Test Session"));

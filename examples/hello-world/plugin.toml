@@ -1,12 +1,12 @@
 [plugin]
 name = "hello-world"
 version = "0.1.0"
-description = "A PAII skill plugin"
+description = "A PAIS skill plugin"
 authors = []
 language = "python"
 license = "MIT"
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 # Contracts this plugin provides

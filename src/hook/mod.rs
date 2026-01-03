@@ -1,6 +1,6 @@
 //! Hook event handling
 //!
-//! Hooks are events fired by Claude Code that PAII can intercept.
+//! Hooks are events fired by Claude Code that PAIS can intercept.
 //! This module handles dispatching those events to plugin handlers.
 
 #![allow(dead_code)]

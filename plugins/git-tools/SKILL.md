@@ -27,10 +27,10 @@ This skill teaches you Scott's custom git productivity CLI tools. These are Rust
 
 ```bash
 clone <repospec> [revision]
-clone scottidler/paii                    # Clone to ./scottidler/paii
-clone scottidler/paii main               # Clone and checkout main
-clone scottidler/paii --versioning       # Clone to scottidler/paii/<sha>
-clone scottidler/paii --mirrorpath ~/mirrors  # Use local mirror for speed
+clone scottidler/pais                    # Clone to ./scottidler/pais
+clone scottidler/pais main               # Clone and checkout main
+clone scottidler/pais --versioning       # Clone to scottidler/pais/<sha>
+clone scottidler/pais --mirrorpath ~/mirrors  # Use local mirror for speed
 ```
 
 ### Key Features

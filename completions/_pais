@@ -1,8 +1,8 @@
-#compdef paii
+#compdef pais
 
 autoload -U is-at-least
 
-_paii() {
+_pais() {
     typeset -A opt_args
     typeset -a _arguments_options
     local ret=1
@@ -15,8 +15,8 @@ _paii() {
 
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -25,20 +25,20 @@ _paii() {
 '--help[Print help]' \
 '-V[Print version]' \
 '--version[Print version]' \
-":: :_paii_commands" \
-"*::: :->paii" \
+":: :_pais_commands" \
+"*::: :->pais" \
 && ret=0
     case $state in
-    (paii)
+    (pais)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-command-$line[1]:"
         case $line[1] in
             (init)
 _arguments "${_arguments_options[@]}" : \
-'--path=[Directory to initialize (defaults to ~/.config/paii)]:PATH:_files' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'--path=[Directory to initialize (defaults to ~/.config/pais)]:PATH:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '--force[Overwrite existing configuration]' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
@@ -50,8 +50,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (doctor)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -62,15 +62,15 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (plugin)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
 '--quiet[Suppress non-error output]' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_paii__plugin_commands" \
+":: :_pais__plugin_commands" \
 "*::: :->plugin" \
 && ret=0
 
@@ -78,7 +78,7 @@ _arguments "${_arguments_options[@]}" : \
     (plugin)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-plugin-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-plugin-command-$line[1]:"
         case $line[1] in
             (list)
 _arguments "${_arguments_options[@]}" : \
@@ -88,8 +88,8 @@ yaml\:"YAML format"))' \
 '--format=[Output format (default\: text for TTY, json for pipes)]:FORMAT:((text\:"Human-readable text"
 json\:"JSON format"
 yaml\:"YAML format"))' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -100,8 +100,8 @@ yaml\:"YAML format"))' \
 ;;
 (install)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '--dev[Symlink for development (don'\''t copy)]' \
 '--force[Overwrite existing installation]' \
 '-v[Enable verbose output]' \
@@ -115,8 +115,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (remove)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '--force[Remove even if other plugins depend on it]' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
@@ -129,8 +129,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (update)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -142,8 +142,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (info)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -158,8 +158,8 @@ _arguments "${_arguments_options[@]}" : \
 '--language=[Language (python or rust)]:LANGUAGE:_default' \
 '--type=[Plugin type (foundation, integration, skill)]:TYPE:_default' \
 '--path=[Output path]:PATH:_files' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -171,8 +171,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (verify)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -184,7 +184,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__plugin__help_commands" \
+":: :_pais__plugin__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -192,7 +192,7 @@ _arguments "${_arguments_options[@]}" : \
     (help)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-plugin-help-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-plugin-help-command-$line[1]:"
         case $line[1] in
             (list)
 _arguments "${_arguments_options[@]}" : \
@@ -236,15 +236,15 @@ esac
 ;;
 (hook)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
 '--quiet[Suppress non-error output]' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_paii__hook_commands" \
+":: :_pais__hook_commands" \
 "*::: :->hook" \
 && ret=0
 
@@ -252,13 +252,13 @@ _arguments "${_arguments_options[@]}" : \
     (hook)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-hook-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-hook-command-$line[1]:"
         case $line[1] in
             (dispatch)
 _arguments "${_arguments_options[@]}" : \
 '--payload=[Event payload JSON (reads from stdin if not provided)]:PAYLOAD:_default' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -271,8 +271,8 @@ _arguments "${_arguments_options[@]}" : \
 (list)
 _arguments "${_arguments_options[@]}" : \
 '--event=[Filter by event type]:EVENT:_default' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -283,7 +283,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__hook__help_commands" \
+":: :_pais__hook__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -291,7 +291,7 @@ _arguments "${_arguments_options[@]}" : \
     (help)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-hook-help-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-hook-help-command-$line[1]:"
         case $line[1] in
             (dispatch)
 _arguments "${_arguments_options[@]}" : \
@@ -315,15 +315,15 @@ esac
 ;;
 (history)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
 '--quiet[Suppress non-error output]' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_paii__history_commands" \
+":: :_pais__history_commands" \
 "*::: :->history" \
 && ret=0
 
@@ -331,7 +331,7 @@ _arguments "${_arguments_options[@]}" : \
     (history)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-history-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-history-command-$line[1]:"
         case $line[1] in
             (query)
 _arguments "${_arguments_options[@]}" : \
@@ -344,8 +344,8 @@ yaml\:"YAML format"))' \
 '--format=[Output format (default\: text for TTY, json for pipes)]:FORMAT:((text\:"Human-readable text"
 json\:"JSON format"
 yaml\:"YAML format"))' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -359,8 +359,8 @@ yaml\:"YAML format"))' \
 _arguments "${_arguments_options[@]}" : \
 '--category=[Category]:CATEGORY:_default' \
 '--count=[Number of entries]:COUNT:_default' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -371,8 +371,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (categories)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -383,7 +383,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__history__help_commands" \
+":: :_pais__history__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -391,7 +391,7 @@ _arguments "${_arguments_options[@]}" : \
     (help)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-history-help-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-history-help-command-$line[1]:"
         case $line[1] in
             (query)
 _arguments "${_arguments_options[@]}" : \
@@ -419,15 +419,15 @@ esac
 ;;
 (config)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
 '--quiet[Suppress non-error output]' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_paii__config_commands" \
+":: :_pais__config_commands" \
 "*::: :->config" \
 && ret=0
 
@@ -435,7 +435,7 @@ _arguments "${_arguments_options[@]}" : \
     (config)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-config-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-config-command-$line[1]:"
         case $line[1] in
             (show)
 _arguments "${_arguments_options[@]}" : \
@@ -445,8 +445,8 @@ yaml\:"YAML format"))' \
 '--format=[Output format (default\: text for TTY, json for pipes)]:FORMAT:((text\:"Human-readable text"
 json\:"JSON format"
 yaml\:"YAML format"))' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -457,8 +457,8 @@ yaml\:"YAML format"))' \
 ;;
 (get)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -470,8 +470,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (set)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -484,7 +484,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__config__help_commands" \
+":: :_pais__config__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -492,7 +492,7 @@ _arguments "${_arguments_options[@]}" : \
     (help)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-config-help-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-config-help-command-$line[1]:"
         case $line[1] in
             (show)
 _arguments "${_arguments_options[@]}" : \
@@ -520,15 +520,15 @@ esac
 ;;
 (registry)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
 '--quiet[Suppress non-error output]' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_paii__registry_commands" \
+":: :_pais__registry_commands" \
 "*::: :->registry" \
 && ret=0
 
@@ -536,12 +536,12 @@ _arguments "${_arguments_options[@]}" : \
     (registry)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-registry-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-registry-command-$line[1]:"
         case $line[1] in
             (list)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -552,8 +552,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (add)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -566,8 +566,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (remove)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -579,8 +579,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (update)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -598,8 +598,8 @@ yaml\:"YAML format"))' \
 '--format=[Output format (default\: text for TTY, json for pipes)]:FORMAT:((text\:"Human-readable text"
 json\:"JSON format"
 yaml\:"YAML format"))' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -617,8 +617,8 @@ yaml\:"YAML format"))' \
 '--format=[Output format (default\: text for TTY, json for pipes)]:FORMAT:((text\:"Human-readable text"
 json\:"JSON format"
 yaml\:"YAML format"))' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -630,7 +630,7 @@ yaml\:"YAML format"))' \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__registry__help_commands" \
+":: :_pais__registry__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -638,7 +638,7 @@ _arguments "${_arguments_options[@]}" : \
     (help)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-registry-help-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-registry-help-command-$line[1]:"
         case $line[1] in
             (list)
 _arguments "${_arguments_options[@]}" : \
@@ -678,8 +678,8 @@ esac
 ;;
 (run)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -699,8 +699,8 @@ yaml\:"YAML format"))' \
 '--format=[Output format (default\: text for TTY, json for pipes)]:FORMAT:((text\:"Human-readable text"
 json\:"JSON format"
 yaml\:"YAML format"))' \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -711,8 +711,8 @@ yaml\:"YAML format"))' \
 ;;
 (completions)
 _arguments "${_arguments_options[@]}" : \
-'-c+[Path to paii.toml config file]:CONFIG:_files' \
-'--config=[Path to paii.toml config file]:CONFIG:_files' \
+'-c+[Path to pais.toml config file]:CONFIG:_files' \
+'--config=[Path to pais.toml config file]:CONFIG:_files' \
 '-v[Enable verbose output]' \
 '--verbose[Enable verbose output]' \
 '-q[Suppress non-error output]' \
@@ -724,7 +724,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__help_commands" \
+":: :_pais__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -732,7 +732,7 @@ _arguments "${_arguments_options[@]}" : \
     (help)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-help-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-help-command-$line[1]:"
         case $line[1] in
             (init)
 _arguments "${_arguments_options[@]}" : \
@@ -744,7 +744,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (plugin)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__help__plugin_commands" \
+":: :_pais__help__plugin_commands" \
 "*::: :->plugin" \
 && ret=0
 
@@ -752,7 +752,7 @@ _arguments "${_arguments_options[@]}" : \
     (plugin)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-help-plugin-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-help-plugin-command-$line[1]:"
         case $line[1] in
             (list)
 _arguments "${_arguments_options[@]}" : \
@@ -788,7 +788,7 @@ esac
 ;;
 (hook)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__help__hook_commands" \
+":: :_pais__help__hook_commands" \
 "*::: :->hook" \
 && ret=0
 
@@ -796,7 +796,7 @@ _arguments "${_arguments_options[@]}" : \
     (hook)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-help-hook-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-help-hook-command-$line[1]:"
         case $line[1] in
             (dispatch)
 _arguments "${_arguments_options[@]}" : \
@@ -812,7 +812,7 @@ esac
 ;;
 (history)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__help__history_commands" \
+":: :_pais__help__history_commands" \
 "*::: :->history" \
 && ret=0
 
@@ -820,7 +820,7 @@ _arguments "${_arguments_options[@]}" : \
     (history)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-help-history-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-help-history-command-$line[1]:"
         case $line[1] in
             (query)
 _arguments "${_arguments_options[@]}" : \
@@ -840,7 +840,7 @@ esac
 ;;
 (config)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__help__config_commands" \
+":: :_pais__help__config_commands" \
 "*::: :->config" \
 && ret=0
 
@@ -848,7 +848,7 @@ _arguments "${_arguments_options[@]}" : \
     (config)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-help-config-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-help-config-command-$line[1]:"
         case $line[1] in
             (show)
 _arguments "${_arguments_options[@]}" : \
@@ -868,7 +868,7 @@ esac
 ;;
 (registry)
 _arguments "${_arguments_options[@]}" : \
-":: :_paii__help__registry_commands" \
+":: :_pais__help__registry_commands" \
 "*::: :->registry" \
 && ret=0
 
@@ -876,7 +876,7 @@ _arguments "${_arguments_options[@]}" : \
     (registry)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:paii-help-registry-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:pais-help-registry-command-$line[1]:"
         case $line[1] in
             (list)
 _arguments "${_arguments_options[@]}" : \
@@ -931,8 +931,8 @@ esac
 esac
 }
 
-(( $+functions[_paii_commands] )) ||
-_paii_commands() {
+(( $+functions[_pais_commands] )) ||
+_pais_commands() {
     local commands; commands=(
 'init:Initialize PAII configuration' \
 'doctor:Diagnose setup issues' \
@@ -946,75 +946,75 @@ _paii_commands() {
 'completions:Generate shell completions' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii commands' commands "$@"
+    _describe -t commands 'pais commands' commands "$@"
 }
-(( $+functions[_paii__completions_commands] )) ||
-_paii__completions_commands() {
+(( $+functions[_pais__completions_commands] )) ||
+_pais__completions_commands() {
     local commands; commands=()
-    _describe -t commands 'paii completions commands' commands "$@"
+    _describe -t commands 'pais completions commands' commands "$@"
 }
-(( $+functions[_paii__config_commands] )) ||
-_paii__config_commands() {
+(( $+functions[_pais__config_commands] )) ||
+_pais__config_commands() {
     local commands; commands=(
 'show:Show current configuration' \
 'get:Get a configuration value' \
 'set:Set a configuration value' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii config commands' commands "$@"
+    _describe -t commands 'pais config commands' commands "$@"
 }
-(( $+functions[_paii__config__get_commands] )) ||
-_paii__config__get_commands() {
+(( $+functions[_pais__config__get_commands] )) ||
+_pais__config__get_commands() {
     local commands; commands=()
-    _describe -t commands 'paii config get commands' commands "$@"
+    _describe -t commands 'pais config get commands' commands "$@"
 }
-(( $+functions[_paii__config__help_commands] )) ||
-_paii__config__help_commands() {
+(( $+functions[_pais__config__help_commands] )) ||
+_pais__config__help_commands() {
     local commands; commands=(
 'show:Show current configuration' \
 'get:Get a configuration value' \
 'set:Set a configuration value' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii config help commands' commands "$@"
+    _describe -t commands 'pais config help commands' commands "$@"
 }
-(( $+functions[_paii__config__help__get_commands] )) ||
-_paii__config__help__get_commands() {
+(( $+functions[_pais__config__help__get_commands] )) ||
+_pais__config__help__get_commands() {
     local commands; commands=()
-    _describe -t commands 'paii config help get commands' commands "$@"
+    _describe -t commands 'pais config help get commands' commands "$@"
 }
-(( $+functions[_paii__config__help__help_commands] )) ||
-_paii__config__help__help_commands() {
+(( $+functions[_pais__config__help__help_commands] )) ||
+_pais__config__help__help_commands() {
     local commands; commands=()
-    _describe -t commands 'paii config help help commands' commands "$@"
+    _describe -t commands 'pais config help help commands' commands "$@"
 }
-(( $+functions[_paii__config__help__set_commands] )) ||
-_paii__config__help__set_commands() {
+(( $+functions[_pais__config__help__set_commands] )) ||
+_pais__config__help__set_commands() {
     local commands; commands=()
-    _describe -t commands 'paii config help set commands' commands "$@"
+    _describe -t commands 'pais config help set commands' commands "$@"
 }
-(( $+functions[_paii__config__help__show_commands] )) ||
-_paii__config__help__show_commands() {
+(( $+functions[_pais__config__help__show_commands] )) ||
+_pais__config__help__show_commands() {
     local commands; commands=()
-    _describe -t commands 'paii config help show commands' commands "$@"
+    _describe -t commands 'pais config help show commands' commands "$@"
 }
-(( $+functions[_paii__config__set_commands] )) ||
-_paii__config__set_commands() {
+(( $+functions[_pais__config__set_commands] )) ||
+_pais__config__set_commands() {
     local commands; commands=()
-    _describe -t commands 'paii config set commands' commands "$@"
+    _describe -t commands 'pais config set commands' commands "$@"
 }
-(( $+functions[_paii__config__show_commands] )) ||
-_paii__config__show_commands() {
+(( $+functions[_pais__config__show_commands] )) ||
+_pais__config__show_commands() {
     local commands; commands=()
-    _describe -t commands 'paii config show commands' commands "$@"
+    _describe -t commands 'pais config show commands' commands "$@"
 }
-(( $+functions[_paii__doctor_commands] )) ||
-_paii__doctor_commands() {
+(( $+functions[_pais__doctor_commands] )) ||
+_pais__doctor_commands() {
     local commands; commands=()
-    _describe -t commands 'paii doctor commands' commands "$@"
+    _describe -t commands 'pais doctor commands' commands "$@"
 }
-(( $+functions[_paii__help_commands] )) ||
-_paii__help_commands() {
+(( $+functions[_pais__help_commands] )) ||
+_pais__help_commands() {
     local commands; commands=(
 'init:Initialize PAII configuration' \
 'doctor:Diagnose setup issues' \
@@ -1028,96 +1028,96 @@ _paii__help_commands() {
 'completions:Generate shell completions' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii help commands' commands "$@"
+    _describe -t commands 'pais help commands' commands "$@"
 }
-(( $+functions[_paii__help__completions_commands] )) ||
-_paii__help__completions_commands() {
+(( $+functions[_pais__help__completions_commands] )) ||
+_pais__help__completions_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help completions commands' commands "$@"
+    _describe -t commands 'pais help completions commands' commands "$@"
 }
-(( $+functions[_paii__help__config_commands] )) ||
-_paii__help__config_commands() {
+(( $+functions[_pais__help__config_commands] )) ||
+_pais__help__config_commands() {
     local commands; commands=(
 'show:Show current configuration' \
 'get:Get a configuration value' \
 'set:Set a configuration value' \
     )
-    _describe -t commands 'paii help config commands' commands "$@"
+    _describe -t commands 'pais help config commands' commands "$@"
 }
-(( $+functions[_paii__help__config__get_commands] )) ||
-_paii__help__config__get_commands() {
+(( $+functions[_pais__help__config__get_commands] )) ||
+_pais__help__config__get_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help config get commands' commands "$@"
+    _describe -t commands 'pais help config get commands' commands "$@"
 }
-(( $+functions[_paii__help__config__set_commands] )) ||
-_paii__help__config__set_commands() {
+(( $+functions[_pais__help__config__set_commands] )) ||
+_pais__help__config__set_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help config set commands' commands "$@"
+    _describe -t commands 'pais help config set commands' commands "$@"
 }
-(( $+functions[_paii__help__config__show_commands] )) ||
-_paii__help__config__show_commands() {
+(( $+functions[_pais__help__config__show_commands] )) ||
+_pais__help__config__show_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help config show commands' commands "$@"
+    _describe -t commands 'pais help config show commands' commands "$@"
 }
-(( $+functions[_paii__help__doctor_commands] )) ||
-_paii__help__doctor_commands() {
+(( $+functions[_pais__help__doctor_commands] )) ||
+_pais__help__doctor_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help doctor commands' commands "$@"
+    _describe -t commands 'pais help doctor commands' commands "$@"
 }
-(( $+functions[_paii__help__help_commands] )) ||
-_paii__help__help_commands() {
+(( $+functions[_pais__help__help_commands] )) ||
+_pais__help__help_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help help commands' commands "$@"
+    _describe -t commands 'pais help help commands' commands "$@"
 }
-(( $+functions[_paii__help__history_commands] )) ||
-_paii__help__history_commands() {
+(( $+functions[_pais__help__history_commands] )) ||
+_pais__help__history_commands() {
     local commands; commands=(
 'query:Search history' \
 'recent:Show recent entries' \
 'categories:List available categories' \
     )
-    _describe -t commands 'paii help history commands' commands "$@"
+    _describe -t commands 'pais help history commands' commands "$@"
 }
-(( $+functions[_paii__help__history__categories_commands] )) ||
-_paii__help__history__categories_commands() {
+(( $+functions[_pais__help__history__categories_commands] )) ||
+_pais__help__history__categories_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help history categories commands' commands "$@"
+    _describe -t commands 'pais help history categories commands' commands "$@"
 }
-(( $+functions[_paii__help__history__query_commands] )) ||
-_paii__help__history__query_commands() {
+(( $+functions[_pais__help__history__query_commands] )) ||
+_pais__help__history__query_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help history query commands' commands "$@"
+    _describe -t commands 'pais help history query commands' commands "$@"
 }
-(( $+functions[_paii__help__history__recent_commands] )) ||
-_paii__help__history__recent_commands() {
+(( $+functions[_pais__help__history__recent_commands] )) ||
+_pais__help__history__recent_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help history recent commands' commands "$@"
+    _describe -t commands 'pais help history recent commands' commands "$@"
 }
-(( $+functions[_paii__help__hook_commands] )) ||
-_paii__help__hook_commands() {
+(( $+functions[_pais__help__hook_commands] )) ||
+_pais__help__hook_commands() {
     local commands; commands=(
 'dispatch:Dispatch a hook event to handlers' \
 'list:List registered hook handlers' \
     )
-    _describe -t commands 'paii help hook commands' commands "$@"
+    _describe -t commands 'pais help hook commands' commands "$@"
 }
-(( $+functions[_paii__help__hook__dispatch_commands] )) ||
-_paii__help__hook__dispatch_commands() {
+(( $+functions[_pais__help__hook__dispatch_commands] )) ||
+_pais__help__hook__dispatch_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help hook dispatch commands' commands "$@"
+    _describe -t commands 'pais help hook dispatch commands' commands "$@"
 }
-(( $+functions[_paii__help__hook__list_commands] )) ||
-_paii__help__hook__list_commands() {
+(( $+functions[_pais__help__hook__list_commands] )) ||
+_pais__help__hook__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help hook list commands' commands "$@"
+    _describe -t commands 'pais help hook list commands' commands "$@"
 }
-(( $+functions[_paii__help__init_commands] )) ||
-_paii__help__init_commands() {
+(( $+functions[_pais__help__init_commands] )) ||
+_pais__help__init_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help init commands' commands "$@"
+    _describe -t commands 'pais help init commands' commands "$@"
 }
-(( $+functions[_paii__help__plugin_commands] )) ||
-_paii__help__plugin_commands() {
+(( $+functions[_pais__help__plugin_commands] )) ||
+_pais__help__plugin_commands() {
     local commands; commands=(
 'list:List installed plugins' \
 'install:Install a plugin' \
@@ -1127,45 +1127,45 @@ _paii__help__plugin_commands() {
 'new:Create a new plugin' \
 'verify:Verify plugin installation' \
     )
-    _describe -t commands 'paii help plugin commands' commands "$@"
+    _describe -t commands 'pais help plugin commands' commands "$@"
 }
-(( $+functions[_paii__help__plugin__info_commands] )) ||
-_paii__help__plugin__info_commands() {
+(( $+functions[_pais__help__plugin__info_commands] )) ||
+_pais__help__plugin__info_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help plugin info commands' commands "$@"
+    _describe -t commands 'pais help plugin info commands' commands "$@"
 }
-(( $+functions[_paii__help__plugin__install_commands] )) ||
-_paii__help__plugin__install_commands() {
+(( $+functions[_pais__help__plugin__install_commands] )) ||
+_pais__help__plugin__install_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help plugin install commands' commands "$@"
+    _describe -t commands 'pais help plugin install commands' commands "$@"
 }
-(( $+functions[_paii__help__plugin__list_commands] )) ||
-_paii__help__plugin__list_commands() {
+(( $+functions[_pais__help__plugin__list_commands] )) ||
+_pais__help__plugin__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help plugin list commands' commands "$@"
+    _describe -t commands 'pais help plugin list commands' commands "$@"
 }
-(( $+functions[_paii__help__plugin__new_commands] )) ||
-_paii__help__plugin__new_commands() {
+(( $+functions[_pais__help__plugin__new_commands] )) ||
+_pais__help__plugin__new_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help plugin new commands' commands "$@"
+    _describe -t commands 'pais help plugin new commands' commands "$@"
 }
-(( $+functions[_paii__help__plugin__remove_commands] )) ||
-_paii__help__plugin__remove_commands() {
+(( $+functions[_pais__help__plugin__remove_commands] )) ||
+_pais__help__plugin__remove_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help plugin remove commands' commands "$@"
+    _describe -t commands 'pais help plugin remove commands' commands "$@"
 }
-(( $+functions[_paii__help__plugin__update_commands] )) ||
-_paii__help__plugin__update_commands() {
+(( $+functions[_pais__help__plugin__update_commands] )) ||
+_pais__help__plugin__update_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help plugin update commands' commands "$@"
+    _describe -t commands 'pais help plugin update commands' commands "$@"
 }
-(( $+functions[_paii__help__plugin__verify_commands] )) ||
-_paii__help__plugin__verify_commands() {
+(( $+functions[_pais__help__plugin__verify_commands] )) ||
+_pais__help__plugin__verify_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help plugin verify commands' commands "$@"
+    _describe -t commands 'pais help plugin verify commands' commands "$@"
 }
-(( $+functions[_paii__help__registry_commands] )) ||
-_paii__help__registry_commands() {
+(( $+functions[_pais__help__registry_commands] )) ||
+_pais__help__registry_commands() {
     local commands; commands=(
 'list:List configured registries' \
 'add:Add a registry' \
@@ -1174,167 +1174,153 @@ _paii__help__registry_commands() {
 'search:Search for plugins in cached registries' \
 'show:Show all plugins in a cached registry' \
     )
-    _describe -t commands 'paii help registry commands' commands "$@"
+    _describe -t commands 'pais help registry commands' commands "$@"
 }
-(( $+functions[_paii__help__registry__add_commands] )) ||
-_paii__help__registry__add_commands() {
+(( $+functions[_pais__help__registry__add_commands] )) ||
+_pais__help__registry__add_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help registry add commands' commands "$@"
+    _describe -t commands 'pais help registry add commands' commands "$@"
 }
-(( $+functions[_paii__help__registry__list_commands] )) ||
-_paii__help__registry__list_commands() {
+(( $+functions[_pais__help__registry__list_commands] )) ||
+_pais__help__registry__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help registry list commands' commands "$@"
+    _describe -t commands 'pais help registry list commands' commands "$@"
 }
-(( $+functions[_paii__help__registry__remove_commands] )) ||
-_paii__help__registry__remove_commands() {
+(( $+functions[_pais__help__registry__remove_commands] )) ||
+_pais__help__registry__remove_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help registry remove commands' commands "$@"
+    _describe -t commands 'pais help registry remove commands' commands "$@"
 }
-(( $+functions[_paii__help__registry__search_commands] )) ||
-_paii__help__registry__search_commands() {
+(( $+functions[_pais__help__registry__search_commands] )) ||
+_pais__help__registry__search_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help registry search commands' commands "$@"
+    _describe -t commands 'pais help registry search commands' commands "$@"
 }
-(( $+functions[_paii__help__registry__show_commands] )) ||
-_paii__help__registry__show_commands() {
+(( $+functions[_pais__help__registry__show_commands] )) ||
+_pais__help__registry__show_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help registry show commands' commands "$@"
+    _describe -t commands 'pais help registry show commands' commands "$@"
 }
-(( $+functions[_paii__help__registry__update_commands] )) ||
-_paii__help__registry__update_commands() {
+(( $+functions[_pais__help__registry__update_commands] )) ||
+_pais__help__registry__update_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help registry update commands' commands "$@"
+    _describe -t commands 'pais help registry update commands' commands "$@"
 }
-(( $+functions[_paii__help__run_commands] )) ||
-_paii__help__run_commands() {
+(( $+functions[_pais__help__run_commands] )) ||
+_pais__help__run_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help run commands' commands "$@"
+    _describe -t commands 'pais help run commands' commands "$@"
 }
-(( $+functions[_paii__help__status_commands] )) ||
-_paii__help__status_commands() {
+(( $+functions[_pais__help__status_commands] )) ||
+_pais__help__status_commands() {
     local commands; commands=()
-    _describe -t commands 'paii help status commands' commands "$@"
+    _describe -t commands 'pais help status commands' commands "$@"
 }
-(( $+functions[_paii__history_commands] )) ||
-_paii__history_commands() {
+(( $+functions[_pais__history_commands] )) ||
+_pais__history_commands() {
     local commands; commands=(
 'query:Search history' \
 'recent:Show recent entries' \
 'categories:List available categories' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii history commands' commands "$@"
+    _describe -t commands 'pais history commands' commands "$@"
 }
-(( $+functions[_paii__history__categories_commands] )) ||
-_paii__history__categories_commands() {
+(( $+functions[_pais__history__categories_commands] )) ||
+_pais__history__categories_commands() {
     local commands; commands=()
-    _describe -t commands 'paii history categories commands' commands "$@"
+    _describe -t commands 'pais history categories commands' commands "$@"
 }
-(( $+functions[_paii__history__help_commands] )) ||
-_paii__history__help_commands() {
+(( $+functions[_pais__history__help_commands] )) ||
+_pais__history__help_commands() {
     local commands; commands=(
 'query:Search history' \
 'recent:Show recent entries' \
 'categories:List available categories' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii history help commands' commands "$@"
+    _describe -t commands 'pais history help commands' commands "$@"
 }
-(( $+functions[_paii__history__help__categories_commands] )) ||
-_paii__history__help__categories_commands() {
+(( $+functions[_pais__history__help__categories_commands] )) ||
+_pais__history__help__categories_commands() {
     local commands; commands=()
-    _describe -t commands 'paii history help categories commands' commands "$@"
+    _describe -t commands 'pais history help categories commands' commands "$@"
 }
-(( $+functions[_paii__history__help__help_commands] )) ||
-_paii__history__help__help_commands() {
+(( $+functions[_pais__history__help__help_commands] )) ||
+_pais__history__help__help_commands() {
     local commands; commands=()
-    _describe -t commands 'paii history help help commands' commands "$@"
+    _describe -t commands 'pais history help help commands' commands "$@"
 }
-(( $+functions[_paii__history__help__query_commands] )) ||
-_paii__history__help__query_commands() {
+(( $+functions[_pais__history__help__query_commands] )) ||
+_pais__history__help__query_commands() {
     local commands; commands=()
-    _describe -t commands 'paii history help query commands' commands "$@"
+    _describe -t commands 'pais history help query commands' commands "$@"
 }
-(( $+functions[_paii__history__help__recent_commands] )) ||
-_paii__history__help__recent_commands() {
+(( $+functions[_pais__history__help__recent_commands] )) ||
+_pais__history__help__recent_commands() {
     local commands; commands=()
-    _describe -t commands 'paii history help recent commands' commands "$@"
+    _describe -t commands 'pais history help recent commands' commands "$@"
 }
-(( $+functions[_paii__history__query_commands] )) ||
-_paii__history__query_commands() {
+(( $+functions[_pais__history__query_commands] )) ||
+_pais__history__query_commands() {
     local commands; commands=()
-    _describe -t commands 'paii history query commands' commands "$@"
+    _describe -t commands 'pais history query commands' commands "$@"
 }
-(( $+functions[_paii__history__recent_commands] )) ||
-_paii__history__recent_commands() {
+(( $+functions[_pais__history__recent_commands] )) ||
+_pais__history__recent_commands() {
     local commands; commands=()
-    _describe -t commands 'paii history recent commands' commands "$@"
+    _describe -t commands 'pais history recent commands' commands "$@"
 }
-(( $+functions[_paii__hook_commands] )) ||
-_paii__hook_commands() {
+(( $+functions[_pais__hook_commands] )) ||
+_pais__hook_commands() {
     local commands; commands=(
 'dispatch:Dispatch a hook event to handlers' \
 'list:List registered hook handlers' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii hook commands' commands "$@"
+    _describe -t commands 'pais hook commands' commands "$@"
 }
-(( $+functions[_paii__hook__dispatch_commands] )) ||
-_paii__hook__dispatch_commands() {
+(( $+functions[_pais__hook__dispatch_commands] )) ||
+_pais__hook__dispatch_commands() {
     local commands; commands=()
-    _describe -t commands 'paii hook dispatch commands' commands "$@"
+    _describe -t commands 'pais hook dispatch commands' commands "$@"
 }
-(( $+functions[_paii__hook__help_commands] )) ||
-_paii__hook__help_commands() {
+(( $+functions[_pais__hook__help_commands] )) ||
+_pais__hook__help_commands() {
     local commands; commands=(
 'dispatch:Dispatch a hook event to handlers' \
 'list:List registered hook handlers' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii hook help commands' commands "$@"
+    _describe -t commands 'pais hook help commands' commands "$@"
 }
-(( $+functions[_paii__hook__help__dispatch_commands] )) ||
-_paii__hook__help__dispatch_commands() {
+(( $+functions[_pais__hook__help__dispatch_commands] )) ||
+_pais__hook__help__dispatch_commands() {
     local commands; commands=()
-    _describe -t commands 'paii hook help dispatch commands' commands "$@"
+    _describe -t commands 'pais hook help dispatch commands' commands "$@"
 }
-(( $+functions[_paii__hook__help__help_commands] )) ||
-_paii__hook__help__help_commands() {
+(( $+functions[_pais__hook__help__help_commands] )) ||
+_pais__hook__help__help_commands() {
     local commands; commands=()
-    _describe -t commands 'paii hook help help commands' commands "$@"
+    _describe -t commands 'pais hook help help commands' commands "$@"
 }
-(( $+functions[_paii__hook__help__list_commands] )) ||
-_paii__hook__help__list_commands() {
+(( $+functions[_pais__hook__help__list_commands] )) ||
+_pais__hook__help__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii hook help list commands' commands "$@"
+    _describe -t commands 'pais hook help list commands' commands "$@"
 }
-(( $+functions[_paii__hook__list_commands] )) ||
-_paii__hook__list_commands() {
+(( $+functions[_pais__hook__list_commands] )) ||
+_pais__hook__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii hook list commands' commands "$@"
+    _describe -t commands 'pais hook list commands' commands "$@"
 }
-(( $+functions[_paii__init_commands] )) ||
-_paii__init_commands() {
+(( $+functions[_pais__init_commands] )) ||
+_pais__init_commands() {
     local commands; commands=()
-    _describe -t commands 'paii init commands' commands "$@"
+    _describe -t commands 'pais init commands' commands "$@"
 }
-(( $+functions[_paii__plugin_commands] )) ||
-_paii__plugin_commands() {
-    local commands; commands=(
-'list:List installed plugins' \
-'install:Install a plugin' \
-'remove:Remove a plugin' \
-'update:Update a plugin' \
-'info:Show plugin details' \
-'new:Create a new plugin' \
-'verify:Verify plugin installation' \
-'help:Print this message or the help of the given subcommand(s)' \
-    )
-    _describe -t commands 'paii plugin commands' commands "$@"
-}
-(( $+functions[_paii__plugin__help_commands] )) ||
-_paii__plugin__help_commands() {
+(( $+functions[_pais__plugin_commands] )) ||
+_pais__plugin_commands() {
     local commands; commands=(
 'list:List installed plugins' \
 'install:Install a plugin' \
@@ -1345,85 +1331,99 @@ _paii__plugin__help_commands() {
 'verify:Verify plugin installation' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii plugin help commands' commands "$@"
+    _describe -t commands 'pais plugin commands' commands "$@"
 }
-(( $+functions[_paii__plugin__help__help_commands] )) ||
-_paii__plugin__help__help_commands() {
+(( $+functions[_pais__plugin__help_commands] )) ||
+_pais__plugin__help_commands() {
+    local commands; commands=(
+'list:List installed plugins' \
+'install:Install a plugin' \
+'remove:Remove a plugin' \
+'update:Update a plugin' \
+'info:Show plugin details' \
+'new:Create a new plugin' \
+'verify:Verify plugin installation' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'pais plugin help commands' commands "$@"
+}
+(( $+functions[_pais__plugin__help__help_commands] )) ||
+_pais__plugin__help__help_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin help help commands' commands "$@"
+    _describe -t commands 'pais plugin help help commands' commands "$@"
 }
-(( $+functions[_paii__plugin__help__info_commands] )) ||
-_paii__plugin__help__info_commands() {
+(( $+functions[_pais__plugin__help__info_commands] )) ||
+_pais__plugin__help__info_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin help info commands' commands "$@"
+    _describe -t commands 'pais plugin help info commands' commands "$@"
 }
-(( $+functions[_paii__plugin__help__install_commands] )) ||
-_paii__plugin__help__install_commands() {
+(( $+functions[_pais__plugin__help__install_commands] )) ||
+_pais__plugin__help__install_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin help install commands' commands "$@"
+    _describe -t commands 'pais plugin help install commands' commands "$@"
 }
-(( $+functions[_paii__plugin__help__list_commands] )) ||
-_paii__plugin__help__list_commands() {
+(( $+functions[_pais__plugin__help__list_commands] )) ||
+_pais__plugin__help__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin help list commands' commands "$@"
+    _describe -t commands 'pais plugin help list commands' commands "$@"
 }
-(( $+functions[_paii__plugin__help__new_commands] )) ||
-_paii__plugin__help__new_commands() {
+(( $+functions[_pais__plugin__help__new_commands] )) ||
+_pais__plugin__help__new_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin help new commands' commands "$@"
+    _describe -t commands 'pais plugin help new commands' commands "$@"
 }
-(( $+functions[_paii__plugin__help__remove_commands] )) ||
-_paii__plugin__help__remove_commands() {
+(( $+functions[_pais__plugin__help__remove_commands] )) ||
+_pais__plugin__help__remove_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin help remove commands' commands "$@"
+    _describe -t commands 'pais plugin help remove commands' commands "$@"
 }
-(( $+functions[_paii__plugin__help__update_commands] )) ||
-_paii__plugin__help__update_commands() {
+(( $+functions[_pais__plugin__help__update_commands] )) ||
+_pais__plugin__help__update_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin help update commands' commands "$@"
+    _describe -t commands 'pais plugin help update commands' commands "$@"
 }
-(( $+functions[_paii__plugin__help__verify_commands] )) ||
-_paii__plugin__help__verify_commands() {
+(( $+functions[_pais__plugin__help__verify_commands] )) ||
+_pais__plugin__help__verify_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin help verify commands' commands "$@"
+    _describe -t commands 'pais plugin help verify commands' commands "$@"
 }
-(( $+functions[_paii__plugin__info_commands] )) ||
-_paii__plugin__info_commands() {
+(( $+functions[_pais__plugin__info_commands] )) ||
+_pais__plugin__info_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin info commands' commands "$@"
+    _describe -t commands 'pais plugin info commands' commands "$@"
 }
-(( $+functions[_paii__plugin__install_commands] )) ||
-_paii__plugin__install_commands() {
+(( $+functions[_pais__plugin__install_commands] )) ||
+_pais__plugin__install_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin install commands' commands "$@"
+    _describe -t commands 'pais plugin install commands' commands "$@"
 }
-(( $+functions[_paii__plugin__list_commands] )) ||
-_paii__plugin__list_commands() {
+(( $+functions[_pais__plugin__list_commands] )) ||
+_pais__plugin__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin list commands' commands "$@"
+    _describe -t commands 'pais plugin list commands' commands "$@"
 }
-(( $+functions[_paii__plugin__new_commands] )) ||
-_paii__plugin__new_commands() {
+(( $+functions[_pais__plugin__new_commands] )) ||
+_pais__plugin__new_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin new commands' commands "$@"
+    _describe -t commands 'pais plugin new commands' commands "$@"
 }
-(( $+functions[_paii__plugin__remove_commands] )) ||
-_paii__plugin__remove_commands() {
+(( $+functions[_pais__plugin__remove_commands] )) ||
+_pais__plugin__remove_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin remove commands' commands "$@"
+    _describe -t commands 'pais plugin remove commands' commands "$@"
 }
-(( $+functions[_paii__plugin__update_commands] )) ||
-_paii__plugin__update_commands() {
+(( $+functions[_pais__plugin__update_commands] )) ||
+_pais__plugin__update_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin update commands' commands "$@"
+    _describe -t commands 'pais plugin update commands' commands "$@"
 }
-(( $+functions[_paii__plugin__verify_commands] )) ||
-_paii__plugin__verify_commands() {
+(( $+functions[_pais__plugin__verify_commands] )) ||
+_pais__plugin__verify_commands() {
     local commands; commands=()
-    _describe -t commands 'paii plugin verify commands' commands "$@"
+    _describe -t commands 'pais plugin verify commands' commands "$@"
 }
-(( $+functions[_paii__registry_commands] )) ||
-_paii__registry_commands() {
+(( $+functions[_pais__registry_commands] )) ||
+_pais__registry_commands() {
     local commands; commands=(
 'list:List configured registries' \
 'add:Add a registry' \
@@ -1433,15 +1433,15 @@ _paii__registry_commands() {
 'show:Show all plugins in a cached registry' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii registry commands' commands "$@"
+    _describe -t commands 'pais registry commands' commands "$@"
 }
-(( $+functions[_paii__registry__add_commands] )) ||
-_paii__registry__add_commands() {
+(( $+functions[_pais__registry__add_commands] )) ||
+_pais__registry__add_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry add commands' commands "$@"
+    _describe -t commands 'pais registry add commands' commands "$@"
 }
-(( $+functions[_paii__registry__help_commands] )) ||
-_paii__registry__help_commands() {
+(( $+functions[_pais__registry__help_commands] )) ||
+_pais__registry__help_commands() {
     local commands; commands=(
 'list:List configured registries' \
 'add:Add a registry' \
@@ -1451,81 +1451,81 @@ _paii__registry__help_commands() {
 'show:Show all plugins in a cached registry' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
-    _describe -t commands 'paii registry help commands' commands "$@"
+    _describe -t commands 'pais registry help commands' commands "$@"
 }
-(( $+functions[_paii__registry__help__add_commands] )) ||
-_paii__registry__help__add_commands() {
+(( $+functions[_pais__registry__help__add_commands] )) ||
+_pais__registry__help__add_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry help add commands' commands "$@"
+    _describe -t commands 'pais registry help add commands' commands "$@"
 }
-(( $+functions[_paii__registry__help__help_commands] )) ||
-_paii__registry__help__help_commands() {
+(( $+functions[_pais__registry__help__help_commands] )) ||
+_pais__registry__help__help_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry help help commands' commands "$@"
+    _describe -t commands 'pais registry help help commands' commands "$@"
 }
-(( $+functions[_paii__registry__help__list_commands] )) ||
-_paii__registry__help__list_commands() {
+(( $+functions[_pais__registry__help__list_commands] )) ||
+_pais__registry__help__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry help list commands' commands "$@"
+    _describe -t commands 'pais registry help list commands' commands "$@"
 }
-(( $+functions[_paii__registry__help__remove_commands] )) ||
-_paii__registry__help__remove_commands() {
+(( $+functions[_pais__registry__help__remove_commands] )) ||
+_pais__registry__help__remove_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry help remove commands' commands "$@"
+    _describe -t commands 'pais registry help remove commands' commands "$@"
 }
-(( $+functions[_paii__registry__help__search_commands] )) ||
-_paii__registry__help__search_commands() {
+(( $+functions[_pais__registry__help__search_commands] )) ||
+_pais__registry__help__search_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry help search commands' commands "$@"
+    _describe -t commands 'pais registry help search commands' commands "$@"
 }
-(( $+functions[_paii__registry__help__show_commands] )) ||
-_paii__registry__help__show_commands() {
+(( $+functions[_pais__registry__help__show_commands] )) ||
+_pais__registry__help__show_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry help show commands' commands "$@"
+    _describe -t commands 'pais registry help show commands' commands "$@"
 }
-(( $+functions[_paii__registry__help__update_commands] )) ||
-_paii__registry__help__update_commands() {
+(( $+functions[_pais__registry__help__update_commands] )) ||
+_pais__registry__help__update_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry help update commands' commands "$@"
+    _describe -t commands 'pais registry help update commands' commands "$@"
 }
-(( $+functions[_paii__registry__list_commands] )) ||
-_paii__registry__list_commands() {
+(( $+functions[_pais__registry__list_commands] )) ||
+_pais__registry__list_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry list commands' commands "$@"
+    _describe -t commands 'pais registry list commands' commands "$@"
 }
-(( $+functions[_paii__registry__remove_commands] )) ||
-_paii__registry__remove_commands() {
+(( $+functions[_pais__registry__remove_commands] )) ||
+_pais__registry__remove_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry remove commands' commands "$@"
+    _describe -t commands 'pais registry remove commands' commands "$@"
 }
-(( $+functions[_paii__registry__search_commands] )) ||
-_paii__registry__search_commands() {
+(( $+functions[_pais__registry__search_commands] )) ||
+_pais__registry__search_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry search commands' commands "$@"
+    _describe -t commands 'pais registry search commands' commands "$@"
 }
-(( $+functions[_paii__registry__show_commands] )) ||
-_paii__registry__show_commands() {
+(( $+functions[_pais__registry__show_commands] )) ||
+_pais__registry__show_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry show commands' commands "$@"
+    _describe -t commands 'pais registry show commands' commands "$@"
 }
-(( $+functions[_paii__registry__update_commands] )) ||
-_paii__registry__update_commands() {
+(( $+functions[_pais__registry__update_commands] )) ||
+_pais__registry__update_commands() {
     local commands; commands=()
-    _describe -t commands 'paii registry update commands' commands "$@"
+    _describe -t commands 'pais registry update commands' commands "$@"
 }
-(( $+functions[_paii__run_commands] )) ||
-_paii__run_commands() {
+(( $+functions[_pais__run_commands] )) ||
+_pais__run_commands() {
     local commands; commands=()
-    _describe -t commands 'paii run commands' commands "$@"
+    _describe -t commands 'pais run commands' commands "$@"
 }
-(( $+functions[_paii__status_commands] )) ||
-_paii__status_commands() {
+(( $+functions[_pais__status_commands] )) ||
+_pais__status_commands() {
     local commands; commands=()
-    _describe -t commands 'paii status commands' commands "$@"
+    _describe -t commands 'pais status commands' commands "$@"
 }
 
-if [ "$funcstack[1]" = "_paii" ]; then
-    _paii "$@"
+if [ "$funcstack[1]" = "_pais" ]; then
+    _pais "$@"
 else
-    compdef _paii paii
+    compdef _pais pais
 fi

@@ -8,7 +8,7 @@ type = "skill"
 license = "MIT"
 tags = ["networking", "cidr", "ip", "calculator"]
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 [provides]

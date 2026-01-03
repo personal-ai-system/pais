@@ -7,6 +7,6 @@ use crate::cli::Cli;
 
 pub fn run(shell: clap_complete::Shell) -> Result<()> {
     let mut cmd = Cli::command();
-    generate(shell, &mut cmd, "paii", &mut io::stdout());
+    generate(shell, &mut cmd, "pais", &mut io::stdout());
     Ok(())
 }

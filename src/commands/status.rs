@@ -47,7 +47,7 @@ pub fn run(format: OutputFormat, config: &Config) -> Result<()> {
             }
         }
         OutputFormat::Text => {
-            println!("{}", "PAII Status".bold());
+            println!("{}", "PAIS Status".bold());
             println!();
 
             println!("  {:12} {}", "Version:".dimmed(), env!("CARGO_PKG_VERSION"));

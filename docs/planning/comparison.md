@@ -1,6 +1,6 @@
-# PAII vs. Kai/PAI Comparison
+# PAIS vs. Kai/PAI Comparison
 
-> What we learned from Daniel Miessler's system and how PAII differs.
+> What we learned from Daniel Miessler's system and how PAIS differs.
 
 ---
 
@@ -10,7 +10,7 @@
 
 **PAI (Personal AI Infrastructure)** is the open-source extraction of Kai, available at [github.com/danielmiessler/Personal_AI_Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure).
 
-**PAII** is a clean-room implementation inspired by Kai/PAI, designed for modularity and team sharing.
+**PAIS** is a clean-room implementation inspired by Kai/PAI, designed for modularity and team sharing.
 
 ---
 
@@ -40,7 +40,7 @@ These ideas from Kai/PAI are excellent and we're keeping them:
 
 **Why it's right:** CLIs are unambiguous, scriptable, and AI-friendly.
 
-**How we use it:** `paii` CLI for all operations. Plugins expose CLI actions.
+**How we use it:** `pais` CLI for all operations. Plugins expose CLI actions.
 
 ### 4. File-Based History
 
@@ -82,7 +82,7 @@ These aspects of Kai/PAI don't fit our needs:
 
 ### 1. Packs → Plugins
 
-| Kai/PAI Packs | PAII Plugins |
+| Kai/PAI Packs | PAIS Plugins |
 |---------------|--------------|
 | Coupled components | Independent units |
 | Strict install order | Any order |
@@ -94,7 +94,7 @@ These aspects of Kai/PAI don't fit our needs:
 
 ### 2. TypeScript/Bun → Python/Rust
 
-| Kai/PAI | PAII |
+| Kai/PAI | PAIS |
 |---------|------|
 | TypeScript everywhere | Rust CLI, Python plugins |
 | Bun runtime required | No JS runtime |
@@ -108,7 +108,7 @@ These aspects of Kai/PAI don't fit our needs:
 
 ### 3. Single-User → Team-Shareable
 
-| Kai/PAI | PAII |
+| Kai/PAI | PAIS |
 |---------|------|
 | Designed for one person | Designed for teams |
 | Global state | Plugin-local state |
@@ -118,7 +118,7 @@ These aspects of Kai/PAI don't fit our needs:
 
 ### 4. Monolithic Bundles → Composable Plugins
 
-| Kai/PAI | PAII |
+| Kai/PAI | PAIS |
 |---------|------|
 | "Kai Bundle" = 8 packs | Install any plugins |
 | All or nothing approach | Pick and choose |
@@ -128,9 +128,9 @@ These aspects of Kai/PAI don't fit our needs:
 
 ### 5. Hardcoded Paths → Discoverable Configuration
 
-| Kai/PAI | PAII |
+| Kai/PAI | PAIS |
 |---------|------|
-| `~/.claude/` hardcoded | `$PAII_DIR` configurable |
+| `~/.claude/` hardcoded | `$PAIS_DIR` configurable |
 | Pack-specific paths | Plugin-relative paths |
 | Global `.env` | Plugin-scoped config |
 
@@ -138,7 +138,7 @@ These aspects of Kai/PAI don't fit our needs:
 
 ### 6. Single-User → Team-Shareable
 
-| Kai/PAI | PAII |
+| Kai/PAI | PAIS |
 |---------|------|
 | One person's system | Designed for sharing |
 | Personal optimization | Team collaboration |
@@ -150,7 +150,7 @@ These aspects of Kai/PAI don't fit our needs:
 
 ## Feature Comparison
 
-| Feature | Kai/PAI | PAII |
+| Feature | Kai/PAI | PAIS |
 |---------|---------|------|
 | **Language** | TypeScript | Python + Rust |
 | **Distribution** | Packs/Bundles | Plugins |
@@ -197,17 +197,17 @@ These aspects of Kai/PAI don't fit our needs:
 └─────────────────────────────────────────┘
 ```
 
-### PAII Architecture
+### PAIS Architecture
 
 ```
 ┌─────────────────────────────────────────┐
 │           CLAUDE CODE                    │
 ├─────────────────────────────────────────┤
 │                                         │
-│    PAII Layer                           │
+│    PAIS Layer                           │
 │                                         │
 │    ┌─────────────────────────────────┐  │
-│    │         PAII CLI (Rust)         │  │
+│    │         PAIS CLI (Rust)         │  │
 │    │  Contract resolution & dispatch  │  │
 │    └─────────────────────────────────┘  │
 │                   │                     │
@@ -245,31 +245,31 @@ These aspects of Kai/PAI don't fit our needs:
 **PAI problem:** Daniel struggles to separate Kai from PAI.
 > "Every time I push from Kai to Pi, it's one of the most stressful things because I've got sensitive stuff in here."
 
-**PAII solution:** Plugins are independent by design. Nothing to "extract."
+**PAIS solution:** Plugins are independent by design. Nothing to "extract."
 
 ### 2. Naming Inconsistency
 
 **PAI problem:** Packs are named `kai-*` in a `PAI` repo.
 
-**PAII solution:** Clean naming from the start. No legacy baggage.
+**PAIS solution:** Clean naming from the start. No legacy baggage.
 
 ### 3. Installation Complexity
 
 **PAI problem:** 8 packs, strict order, 12-item verification checklist.
 
-**PAII solution:** `paii plugin install <name>`. Done.
+**PAIS solution:** `pais plugin install <name>`. Done.
 
 ### 4. Team Sharing
 
 **PAI problem:** Fork the whole repo, manage conflicts.
 
-**PAII solution:** Install plugins from separate repos. No conflicts.
+**PAIS solution:** Install plugins from separate repos. No conflicts.
 
 ### 5. Optional Features
 
 **PAI problem:** Voice and art baked in even if not needed.
 
-**PAII solution:** Don't install what you don't need.
+**PAIS solution:** Don't install what you don't need.
 
 ---
 
@@ -277,7 +277,7 @@ These aspects of Kai/PAI don't fit our needs:
 
 Credit where due: Daniel Miessler's Kai/PAI system is impressive and pioneering. The core ideas—scaffolding over model, code before prompts, file-based memory—are sound.
 
-PAII doesn't claim to be better. It's **different**:
+PAIS doesn't claim to be better. It's **different**:
 - Different audience (teams vs. individuals)
 - Different goals (team sharing vs. personal optimization)
 - Different language preferences (Python/Rust vs. TypeScript)
@@ -297,7 +297,7 @@ The primary source for understanding Kai/PAI is Daniel's walkthrough:
 
 ## Related Documents
 
-- [vision.md](vision.md) — PAII philosophy and goals
-- [architecture.md](architecture.md) — PAII system design
+- [vision.md](vision.md) — PAIS philosophy and goals
+- [architecture.md](architecture.md) — PAIS system design
 - [decisions.md](decisions.md) — Why we made these choices
 

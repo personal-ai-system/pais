@@ -1,12 +1,12 @@
 [plugin]
 name = "hello-rust"
 version = "0.1.0"
-description = "A PAII skill plugin"
+description = "A PAIS skill plugin"
 authors = []
 language = "rust"
 license = "MIT"
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 # Contracts this plugin provides

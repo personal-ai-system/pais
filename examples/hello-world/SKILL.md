@@ -15,7 +15,7 @@ Greet someone by name.
 
 **Example:**
 ```
-paii run hello-world greet Alice
+pais run hello-world greet Alice
 ```
 
 ### version

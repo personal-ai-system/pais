@@ -1,10 +1,10 @@
-# PAII - Personal AI Infrastructure
+# PAIS - Personal AI Infrastructure
 
 > A modular plugin system for Claude Code, built in Rust.
 
 ## Project Overview
 
-PAII extends Claude Code with:
+PAIS extends Claude Code with:
 - **Security hooks** — Block dangerous commands before execution
 - **History system** — Track sessions, learnings, decisions
 - **Plugin system** — Python and Rust plugins with manifest-based discovery
@@ -32,15 +32,15 @@ cargo install --path . --locked
 src/
 ├── main.rs          # Entry point, CLI dispatch
 ├── cli.rs           # Clap command definitions
-├── config.rs        # Configuration loading (paii.toml)
+├── config.rs        # Configuration loading (pais.toml)
 ├── commands/        # Subcommand implementations
-│   ├── plugin.rs    # paii plugin *
-│   ├── hook.rs      # paii hook dispatch
-│   ├── history.rs   # paii history *
-│   ├── config.rs    # paii config *
-│   ├── registry.rs  # paii registry *
-│   ├── run.rs       # paii run <plugin> <action>
-│   └── status.rs    # paii status
+│   ├── plugin.rs    # pais plugin *
+│   ├── hook.rs      # pais hook dispatch
+│   ├── history.rs   # pais history *
+│   ├── config.rs    # pais config *
+│   ├── registry.rs  # pais registry *
+│   ├── run.rs       # pais run <plugin> <action>
+│   └── status.rs    # pais status
 ├── hook/
 │   ├── mod.rs       # HookEvent, HookResult, HookHandler trait
 │   ├── security.rs  # SecurityValidator (blocks dangerous commands)
@@ -56,7 +56,7 @@ src/
 
 ## Key Files
 
-- `paii.toml` — User configuration (paths, registries, hooks)
+- `pais.toml` — User configuration (paths, registries, hooks)
 - `plugin.toml` — Plugin manifest (in each plugin directory)
 - `.claude/settings.json` — Claude Code hook registration
 
@@ -70,7 +70,7 @@ src/
 
 ## Plugin System
 
-Plugins live in `~/.config/paii/plugins/<name>/` with:
+Plugins live in `~/.config/pais/plugins/<name>/` with:
 - `plugin.toml` — Manifest (name, version, language, hooks)
 - `src/main.py` or `src/main.rs` — Entry point
 - `SKILL.md` — Optional skill definition
@@ -80,7 +80,7 @@ Plugins live in `~/.config/paii/plugins/<name>/` with:
 
 ## Hooks
 
-Claude Code calls `paii hook dispatch <event>` with JSON on stdin.
+Claude Code calls `pais hook dispatch <event>` with JSON on stdin.
 
 | Event | Purpose |
 |-------|---------|
@@ -93,7 +93,7 @@ Exit codes: `0` = allow, `2` = block.
 
 ## History
 
-Stored in `~/.config/paii/history/<category>/<date>/<id>.md`
+Stored in `~/.config/pais/history/<category>/<date>/<id>.md`
 
 Categories: `sessions`, `events`, `learnings`, `decisions`
 
@@ -106,7 +106,7 @@ Categories: `sessions`, `events`, `learnings`, `decisions`
 | **JSON** | API responses, hook payloads | Required by external systems |
 
 - History entries use **Markdown with YAML frontmatter**
-- Config files use **TOML** (paii.toml, plugin.toml)
+- Config files use **TOML** (pais.toml, plugin.toml)
 - Hook payloads are **JSON** (Claude Code's protocol)
 - Plugin CLI output is **JSON** (for programmatic parsing)
 

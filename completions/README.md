@@ -1,6 +1,6 @@
 # Shell Completions
 
-Pre-generated shell completions for `paii`.
+Pre-generated shell completions for `pais`.
 
 ## Installation
 
@@ -9,7 +9,7 @@ Pre-generated shell completions for `paii`.
 ```bash
 # Option 1: Copy to a directory in your fpath
 mkdir -p ~/.zsh/completions
-cp completions/_paii ~/.zsh/completions/
+cp completions/_pais ~/.zsh/completions/
 
 # Add to ~/.zshrc (if not already):
 # fpath=(~/.zsh/completions $fpath)
@@ -20,16 +20,16 @@ cp completions/_paii ~/.zsh/completions/
 
 ```bash
 # Option 1: Copy to bash-completion directory
-sudo cp completions/paii.bash /etc/bash_completion.d/paii
+sudo cp completions/pais.bash /etc/bash_completion.d/pais
 
 # Option 2: Source in ~/.bashrc
-# source /path/to/paii/completions/paii.bash
+# source /path/to/pais/completions/pais.bash
 ```
 
 ### Fish
 
 ```bash
-cp completions/paii.fish ~/.config/fish/completions/
+cp completions/pais.fish ~/.config/fish/completions/
 ```
 
 ## Regenerating
@@ -37,8 +37,8 @@ cp completions/paii.fish ~/.config/fish/completions/
 If you build from source or the CLI changes:
 
 ```bash
-paii completions zsh > completions/_paii
-paii completions bash > completions/paii.bash
-paii completions fish > completions/paii.fish
+pais completions zsh > completions/_pais
+pais completions bash > completions/pais.bash
+pais completions fish > completions/pais.fish
 ```
 

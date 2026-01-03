@@ -1,4 +1,4 @@
-# PAII Architecture
+# PAIS Architecture
 
 > Technical design for Personal AI Infrastructure built on Claude Code.
 
@@ -6,7 +6,7 @@
 
 ## System Overview
 
-PAII is a **plugin layer** on top of Claude Code's native primitives. It does not replace Claude Code—it composes its features into a modular, team-shareable system.
+PAIS is a **plugin layer** on top of Claude Code's native primitives. It does not replace Claude Code—it composes its features into a modular, team-shareable system.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -29,10 +29,10 @@ PAII is a **plugin layer** on top of Claude Code's native primitives. It does no
            │               │               │               │
            ▼               ▼               ▼               ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              PAII LAYER                                      │
+│                              PAIS LAYER                                      │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │                         PAII CLI (Rust)                             │   │
+│   │                         PAIS CLI (Rust)                             │   │
 │   │  • Plugin discovery and loading                                     │   │
 │   │  • Contract resolution (provides/consumes)                          │   │
 │   │  • Hook dispatcher (routes to plugins)                              │   │
@@ -60,8 +60,8 @@ PAII is a **plugin layer** on top of Claude Code's native primitives. It does no
 ## Directory Structure
 
 ```
-~/.config/paii/                      # PAII_DIR (configurable)
-├── paii.toml                        # Global configuration
+~/.config/pais/                      # PAIS_DIR (configurable)
+├── pais.toml                        # Global configuration
 ├── .env                             # Secrets (API keys)
 ├── plugins/                         # Installed plugins
 │   ├── hooks/                       # Foundation: hook handling
@@ -88,7 +88,7 @@ PAII is a **plugin layer** on top of Claude Code's native primitives. It does no
 │   ├── decisions/YYYY-MM/
 │   └── raw/YYYY-MM/
 └── registries/                      # Plugin registries
-    ├── core.toml                    # From PAII repo
+    ├── core.toml                    # From PAIS repo
     └── work.toml                    # Team private registry
 ```
 
@@ -96,11 +96,11 @@ PAII is a **plugin layer** on top of Claude Code's native primitives. It does no
 
 ## Integration with Claude Code
 
-PAII integrates with Claude Code through its native extension points:
+PAIS integrates with Claude Code through its native extension points:
 
 ### Hooks Integration
 
-Claude Code fires hook events. PAII's hook dispatcher routes them to plugins.
+Claude Code fires hook events. PAIS's hook dispatcher routes them to plugins.
 
 **Claude Code settings.json:**
 ```json
@@ -110,35 +110,35 @@ Claude Code fires hook events. PAII's hook dispatcher routes them to plugins.
       "matcher": "Bash",
       "hooks": [{
         "type": "command",
-        "command": "paii hook dispatch pre-tool-use"
+        "command": "pais hook dispatch pre-tool-use"
       }]
     }],
     "Stop": [{
       "matcher": "",
       "hooks": [{
         "type": "command",
-        "command": "paii hook dispatch stop"
+        "command": "pais hook dispatch stop"
       }]
     }],
     "SessionStart": [{
       "matcher": "",
       "hooks": [{
         "type": "command",
-        "command": "paii hook dispatch session-start"
+        "command": "pais hook dispatch session-start"
       }]
     }]
   }
 }
 ```
 
-**PAII dispatches to plugins:**
+**PAIS dispatches to plugins:**
 ```
-Claude Code Event → paii hook dispatch → Plugin handlers
+Claude Code Event → pais hook dispatch → Plugin handlers
 ```
 
 ### Skills Integration
 
-PAII plugins can provide Claude Code skills by including `SKILL.md` files:
+PAIS plugins can provide Claude Code skills by including `SKILL.md` files:
 
 ```
 plugins/incident/
@@ -149,7 +149,7 @@ plugins/incident/
     └── postmortem.md
 ```
 
-Claude Code automatically loads skills from `~/.claude/skills/` and `.claude/skills/`. PAII symlinks or copies plugin skills to these locations.
+Claude Code automatically loads skills from `~/.claude/skills/` and `.claude/skills/`. PAIS symlinks or copies plugin skills to these locations.
 
 ### Subagents Integration
 
@@ -192,8 +192,8 @@ description = "Incident response workflows"
 authors = ["your-team"]
 language = "python"  # or "rust" or "mixed"
 
-[paii]
-core_version = ">=0.1.0"  # Minimum PAII version
+[pais]
+core_version = ">=0.1.0"  # Minimum PAIS version
 
 [provides]
 # Contracts this plugin implements
@@ -255,8 +255,8 @@ Plugins communicate through **contracts**, not direct dependencies:
 ### Plugin Loading Sequence
 
 ```
-1. PAII CLI starts
-2. Scan ~/.config/paii/plugins/ for plugin.toml files
+1. PAIS CLI starts
+2. Scan ~/.config/pais/plugins/ for plugin.toml files
 3. Parse all manifests (no code loaded yet)
 4. Build dependency graph from provides/consumes
 5. Check for missing required contracts (fail if any)
@@ -278,7 +278,7 @@ Plugins communicate through **contracts**, not direct dependencies:
 
 ```
 ┌──────────────┐     event JSON      ┌──────────────┐
-│  Claude Code │ ─────────────────► │  paii hook   │
+│  Claude Code │ ─────────────────► │  pais hook   │
 │    fires     │     via stdin      │   dispatch   │
 │  PreToolUse  │                    │              │
 └──────────────┘                    └──────┬───────┘
@@ -297,7 +297,7 @@ Plugins communicate through **contracts**, not direct dependencies:
                       │ returns block/allow
                       ▼
                ┌─────────────┐
-               │  paii hook  │
+               │  pais hook  │
                │   returns   │
                │  exit code  │ ──────► 0=allow, 2=block
                └─────────────┘
@@ -324,7 +324,7 @@ Plugins communicate through **contracts**, not direct dependencies:
                       │                    │                    │
                       ▼                    ▼                    ▼
                ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-               │ paii run    │      │ MCP server  │      │ subagent    │
+               │ pais run    │      │ MCP server  │      │ subagent    │
                │ incident    │      │ (pagerduty) │      │ researcher  │
                │ --action X  │      │             │      │             │
                └─────────────┘      └─────────────┘      └─────────────┘
@@ -334,7 +334,7 @@ Plugins communicate through **contracts**, not direct dependencies:
 
 ```
 ┌──────────────┐     Stop event     ┌──────────────┐
-│  Claude Code │ ─────────────────► │  paii hook   │
+│  Claude Code │ ─────────────────► │  pais hook   │
 │  completes   │                    │   dispatch   │
 │    task      │                    │              │
 └──────────────┘                    └──────┬───────┘
@@ -382,7 +382,7 @@ tracing = "0.1"
 - Hook event dispatch
 - Contract resolution
 - Configuration management
-- CLI commands (`paii plugin install`, `paii hook dispatch`, etc.)
+- CLI commands (`pais plugin install`, `pais hook dispatch`, etc.)
 
 ### Python Plugins
 
@@ -421,24 +421,24 @@ regex = "1"
 
 ## Configuration
 
-### Global Configuration (`paii.toml`)
+### Global Configuration (`pais.toml`)
 
 ```toml
-[paii]
+[pais]
 version = "0.1.0"
 
 [paths]
-plugins = "~/.config/paii/plugins"
-history = "~/.config/paii/history"
-registries = "~/.config/paii/registries"
+plugins = "~/.config/pais/plugins"
+history = "~/.config/pais/history"
+registries = "~/.config/pais/registries"
 
 [defaults]
 language = "python"
 log_level = "info"
 
 [registries]
-core = "https://github.com/scottidler/paii/registry/plugins.toml"
-# work = "https://github.com/your-company/paii-plugins/registry.toml"
+core = "https://github.com/scottidler/pais/registry/plugins.toml"
+# work = "https://github.com/your-company/pais-plugins/registry.toml"
 ```
 
 ### Secrets (`.env`)
@@ -458,7 +458,7 @@ ANTHROPIC_API_KEY=xxx
 Each plugin reads config from its manifest defaults + user overrides:
 
 ```toml
-# ~/.config/paii/plugins/incident/config.toml (user overrides)
+# ~/.config/pais/plugins/incident/config.toml (user overrides)
 escalation_threshold_minutes = 15
 default_severity = "SEV-2"
 ```

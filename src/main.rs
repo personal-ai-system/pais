@@ -19,12 +19,12 @@ fn setup_logging() -> Result<()> {
     // Create log directory
     let log_dir = dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("paii")
+        .join("pais")
         .join("logs");
 
     fs::create_dir_all(&log_dir).context("Failed to create log directory")?;
 
-    let log_file = log_dir.join("paii.log");
+    let log_file = log_dir.join("pais.log");
 
     // Setup env_logger with file output
     let target = Box::new(
@@ -68,7 +68,7 @@ fn main() -> Result<()> {
     // Load configuration
     let config = Config::load(cli.config.as_ref()).context("Failed to load configuration")?;
 
-    info!("Starting paii with config from: {:?}", cli.config);
+    info!("Starting pais with config from: {:?}", cli.config);
 
     // Run the command
     run(cli, config).context("Command failed")?;

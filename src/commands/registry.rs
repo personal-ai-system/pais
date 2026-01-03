@@ -93,7 +93,7 @@ fn add(name: &str, url: &str, config: &Config) -> Result<()> {
     new_config.registries.insert(name.to_string(), url.to_string());
 
     // Save config
-    let config_path = Config::paii_dir().join("paii.toml");
+    let config_path = Config::pais_dir().join("pais.toml");
     fs::create_dir_all(config_path.parent().unwrap())?;
 
     let toml_str = toml::to_string_pretty(&new_config).context("Failed to serialize config")?;
@@ -117,7 +117,7 @@ fn remove(name: &str, config: &Config) -> Result<()> {
     new_config.registries.remove(name);
 
     // Save config
-    let config_path = Config::paii_dir().join("paii.toml");
+    let config_path = Config::pais_dir().join("pais.toml");
     let toml_str = toml::to_string_pretty(&new_config).context("Failed to serialize config")?;
     fs::write(&config_path, toml_str).context("Failed to write config file")?;
 
@@ -194,7 +194,7 @@ fn fetch_remote_registry(url: &str) -> Result<String> {
     log::info!("Fetching registry from: {}", url);
 
     let response = ureq::get(url)
-        .header("User-Agent", "paii/0.1.0")
+        .header("User-Agent", "pais/0.1.0")
         .call()
         .context("HTTP request failed")?;
 
@@ -289,7 +289,7 @@ fn search(query: &str, format: OutputFormat, config: &Config) -> Result<()> {
                 println!();
                 println!(
                     "Try running {} to update registries first.",
-                    "paii registry update".cyan()
+                    "pais registry update".cyan()
                 );
                 return Ok(());
             }
@@ -328,7 +328,7 @@ fn show(name: &str, format: OutputFormat, config: &Config) -> Result<()> {
         // Check if registry is configured but not cached
         if config.registries.contains_key(name) {
             eyre::bail!(
-                "Registry '{}' is configured but not cached.\nRun 'paii registry update {}' first.",
+                "Registry '{}' is configured but not cached.\nRun 'pais registry update {}' first.",
                 name,
                 name
             );

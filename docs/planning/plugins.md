@@ -1,6 +1,6 @@
-# PAII Plugin Development Guide
+# PAIS Plugin Development Guide
 
-> How to create, test, and distribute PAII plugins.
+> How to create, test, and distribute PAIS plugins.
 
 ---
 
@@ -9,7 +9,7 @@
 ### 1. Scaffold a New Plugin
 
 ```bash
-paii plugin new my-skill --type skill --language python
+pais plugin new my-skill --type skill --language python
 cd my-skill
 ```
 
@@ -40,7 +40,7 @@ description = "My custom skill for doing X"
 authors = ["your-name"]
 language = "python"
 
-[paii]
+[pais]
 core_version = ">=0.1.0"
 
 [provides]
@@ -58,7 +58,7 @@ some_setting = { type = "string", default = "default_value" }
 Edit `src/plugin.py`:
 
 ```python
-from paii.plugin import Plugin, PluginContext
+from pais.plugin import Plugin, PluginContext
 
 class MySkillPlugin(Plugin):
     def __init__(self, context: PluginContext, config: dict):
@@ -126,13 +126,13 @@ User: "Help me do X"
 
 ```bash
 # Install in development mode (symlink)
-paii plugin install ./my-skill --dev
+pais plugin install ./my-skill --dev
 
 # Verify installation
-paii plugin verify my-skill
+pais plugin verify my-skill
 
 # Test the plugin
-paii run my-skill execute --action test
+pais run my-skill execute --action test
 ```
 
 ---
@@ -238,8 +238,8 @@ repository = "https://github.com/you/my-plugin"
 homepage = "https://my-plugin.example.com"
 keywords = ["sre", "incident", "automation"]
 
-[paii]
-core_version = ">=0.1.0"     # Required PAII version
+[pais]
+core_version = ">=0.1.0"     # Required PAIS version
 ```
 
 ### Contracts
@@ -348,7 +348,7 @@ import yaml
 class HistoryPlugin(Plugin):
     def __init__(self, context: PluginContext, config: dict):
         self.context = context
-        self.history_dir = Path(config.get("history_dir", "~/.config/paii/history")).expanduser()
+        self.history_dir = Path(config.get("history_dir", "~/.config/pais/history")).expanduser()
         self.categories = config.get("categories", ["sessions", "learnings"])
         self._ensure_dirs()
 
@@ -553,9 +553,9 @@ pub fn handle_pre_tool_use(payload: &str) -> HookResult {
     HookResult { action: 0, message: None }
 }
 
-// Entry point called by PAII
+// Entry point called by PAIS
 #[no_mangle]
-pub extern "C" fn paii_handle_hook(
+pub extern "C" fn pais_handle_hook(
     event_type: *const std::os::raw::c_char,
     payload: *const std::os::raw::c_char,
 ) -> *mut std::os::raw::c_char {
@@ -587,9 +587,9 @@ allowed-tools: Read, Bash, Write
 
 ## Available Tools
 
-- `paii run incident declare --severity SEV-2`
-- `paii run incident update --id INC-123`
-- `paii run pagerduty acknowledge --id P123`
+- `pais run incident declare --severity SEV-2`
+- `pais run incident update --id INC-123`
+- `pais run pagerduty acknowledge --id P123`
 
 ## Integration
 
@@ -637,8 +637,8 @@ Focus on:
 // .mcp.json
 {
   "jira": {
-    "command": "${PAII_PLUGIN_DIR}/servers/jira-mcp",
-    "args": ["--config", "${PAII_PLUGIN_DIR}/config.json"],
+    "command": "${PAIS_PLUGIN_DIR}/servers/jira-mcp",
+    "args": ["--config", "${PAIS_PLUGIN_DIR}/config.json"],
     "env": {
       "JIRA_URL": "${JIRA_URL}",
       "JIRA_TOKEN": "${JIRA_TOKEN}"
@@ -691,7 +691,7 @@ import subprocess
 
 def test_plugin_runs():
     result = subprocess.run(
-        ["paii", "run", "my-skill", "execute", "--action", "test"],
+        ["pais", "run", "my-skill", "execute", "--action", "test"],
         capture_output=True, text=True
     )
     assert result.returncode == 0
@@ -706,11 +706,11 @@ def test_plugin_runs():
 
 ```bash
 # Team can install directly
-paii plugin install github.com/your-company/paii-plugins/my-skill
+pais plugin install github.com/your-company/pais-plugins/my-skill
 
 # Or clone and install locally
-git clone github.com/your-company/paii-plugins
-paii plugin install ./paii-plugins/my-skill
+git clone github.com/your-company/pais-plugins
+pais plugin install ./pais-plugins/my-skill
 ```
 
 ### Via Registry
@@ -721,7 +721,7 @@ Add to a registry:
 # registry/plugins.toml
 
 [plugins.my-skill]
-source = "github.com/your-company/paii-plugins/my-skill"
+source = "github.com/your-company/pais-plugins/my-skill"
 version = ">=1.0.0"
 description = "My custom skill"
 provides = ["skill"]
@@ -730,7 +730,7 @@ provides = ["skill"]
 Install from registry:
 
 ```bash
-paii plugin install my-skill
+pais plugin install my-skill
 ```
 
 ### Via Claude Code Marketplace

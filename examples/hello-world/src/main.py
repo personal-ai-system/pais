@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-hello-world - A PAII plugin
+hello-world - A PAIS plugin
 """
 import json
 import sys

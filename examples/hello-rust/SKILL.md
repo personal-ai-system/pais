@@ -15,7 +15,7 @@ Greet someone by name.
 
 **Example:**
 ```
-paii run examples/hello-rust greet Alice
+pais run examples/hello-rust greet Alice
 ```
 
 ### version
