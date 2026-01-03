@@ -550,8 +550,8 @@ fn generate_skill_index(format: OutputFormat, config: &Config) -> Result<()> {
             println!();
 
             // Group by tier
-            let mut core: Vec<_> = index.skills.values().filter(|s| s.tier == "core").collect();
-            let mut deferred: Vec<_> = index.skills.values().filter(|s| s.tier == "deferred").collect();
+            let mut core: Vec<_> = index.skills.values().filter(|s| s.tier.is_core()).collect();
+            let mut deferred: Vec<_> = index.skills.values().filter(|s| !s.tier.is_core()).collect();
 
             core.sort_by(|a, b| a.name.cmp(&b.name));
             deferred.sort_by(|a, b| a.name.cmp(&b.name));

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use super::parser::parse_skill_md;
+use super::parser::{SkillTier, parse_skill_md};
 use super::workflow::{WorkflowRoute, discover_workflows};
 
 /// A skill entry in the index
@@ -29,8 +29,8 @@ pub struct SkillIndexEntry {
     pub description: String,
     /// Extracted trigger words from USE WHEN clause
     pub triggers: Vec<String>,
-    /// Loading tier: "core" (always loaded) or "deferred" (loaded on match)
-    pub tier: String,
+    /// Loading tier
+    pub tier: SkillTier,
     /// Available workflows for this skill
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub workflows: Vec<WorkflowRoute>,
@@ -51,8 +51,8 @@ pub struct SkillIndex {
     pub skills: HashMap<String, SkillIndexEntry>,
 }
 
-/// Skills that should always be loaded at session start
-const CORE_SKILLS: &[&str] = &["core", "pais"];
+/// Skills that should always be loaded at session start (override frontmatter tier)
+const FORCE_CORE_SKILLS: &[&str] = &["core"];
 
 /// Extract trigger words from a USE WHEN clause
 pub fn extract_triggers(description: &str) -> Vec<String> {
@@ -135,7 +135,15 @@ pub fn generate_index(skills_dir: &Path) -> Result<SkillIndex> {
         match parse_skill_md(&skill_md) {
             Ok(metadata) => {
                 let name_lower = metadata.name.to_lowercase();
-                let tier = if CORE_SKILLS.contains(&name_lower.as_str()) { "core" } else { "deferred" };
+
+                // Tier is determined by:
+                // 1. Force-core list (always core regardless of frontmatter)
+                // 2. Frontmatter tier field
+                let tier = if FORCE_CORE_SKILLS.contains(&name_lower.as_str()) {
+                    SkillTier::Core
+                } else {
+                    metadata.tier
+                };
 
                 let relative_path = path
                     .file_name()
@@ -152,11 +160,11 @@ pub fn generate_index(skills_dir: &Path) -> Result<SkillIndex> {
                     path: relative_path,
                     description: metadata.description.clone(),
                     triggers,
-                    tier: tier.to_string(),
+                    tier,
                     workflows,
                 };
 
-                if tier == "core" {
+                if tier.is_core() {
                     index.core_count += 1;
                 } else {
                     index.deferred_count += 1;

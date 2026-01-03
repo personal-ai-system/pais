@@ -8,6 +8,7 @@
 //! ---
 //! name: terraform
 //! description: Terraform best practices and patterns
+//! tier: deferred  # optional: core, deferred (default)
 //! ---
 //!
 //! # Terraform
@@ -17,9 +18,108 @@
 //! ```
 
 use eyre::{Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
+
+/// Skill loading tier
+///
+/// Determines when and how much of a skill is loaded into context.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SkillTier {
+    /// Tier 0: Always present, full content injected at session start
+    Core,
+    /// Tier 1: Name + description + triggers in context (default)
+    /// Full body loaded on explicit invocation
+    #[default]
+    Deferred,
+}
+
+impl Serialize for SkillTier {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for SkillTier {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct TierVisitor;
+
+        impl serde::de::Visitor<'_> for TierVisitor {
+            type Value = SkillTier;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a tier value (core, deferred, 0, or 1)")
+            }
+
+            fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                SkillTier::from_str(v).map_err(serde::de::Error::custom)
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match v {
+                    0 => Ok(SkillTier::Core),
+                    1 => Ok(SkillTier::Deferred),
+                    _ => Err(serde::de::Error::custom(format!(
+                        "Unknown tier number {}. Valid values: 0 (core), 1 (deferred)",
+                        v
+                    ))),
+                }
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_u64(v as u64)
+            }
+        }
+
+        deserializer.deserialize_any(TierVisitor)
+    }
+}
+
+impl SkillTier {
+    /// Check if this is a core tier skill
+    pub fn is_core(&self) -> bool {
+        matches!(self, SkillTier::Core)
+    }
+}
+
+impl fmt::Display for SkillTier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SkillTier::Core => write!(f, "core"),
+            SkillTier::Deferred => write!(f, "deferred"),
+        }
+    }
+}
+
+impl FromStr for SkillTier {
+    type Err = eyre::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_str() {
+            "core" | "0" | "tier0" => Ok(SkillTier::Core),
+            "deferred" | "1" | "tier1" | "frontmatter" => Ok(SkillTier::Deferred),
+            _ => eyre::bail!("Unknown tier '{}'. Valid values: core, deferred", s),
+        }
+    }
+}
 
 /// Metadata extracted from SKILL.md frontmatter
 #[derive(Debug, Clone, Deserialize)]
@@ -35,6 +135,9 @@ pub struct SkillMetadata {
     /// Optional version
     #[serde(default)]
     pub version: Option<String>,
+    /// Loading tier (core or deferred)
+    #[serde(default)]
+    pub tier: SkillTier,
 }
 
 /// Parse SKILL.md and extract frontmatter metadata

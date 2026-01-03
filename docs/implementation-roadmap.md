@@ -76,22 +76,36 @@ src/skill/indexer.rs                   # Modified - workflows in index/context
 ~/.config/pais/skills/rust-coder/workflows/new-cli.md  # Example workflow
 ```
 
-### 1.3 Tiered Loading Implementation
+### 1.3 Tiered Loading Implementation ✅ DONE
 
 Formalize the tier system for skill loading.
 
 **Tasks:**
-- [ ] Define tier enum: `Core`, `Frontmatter`, `FullSkill`, `Workflow`
-- [ ] Update skill index to include tier information
-- [ ] Update context injection to respect tiers
-- [ ] Add tier configuration per skill in frontmatter
+- [x] Define `SkillTier` enum: `Core`, `Deferred`
+- [x] Update skill index to include tier information
+- [x] Add tier configuration per skill in frontmatter (`tier: core` or `tier: 0`)
+- [x] Update context injection to load all core-tier skills
 
 **Tier Definitions:**
 ```
-Tier 0 (Core):       Always present, injected at session start
-Tier 1 (Frontmatter): Name + description + triggers in context
-Tier 2 (Full Skill):  Body loaded when skill is invoked
-Tier 3 (Workflow):    Specific workflow.md loaded on route
+Tier 0 (Core):     Always present, full body injected at session start
+Tier 1 (Deferred): Name + description + triggers in context, body on invoke
+```
+
+**Usage:**
+```yaml
+---
+name: my-skill
+description: My custom skill
+tier: core  # or tier: 0
+---
+```
+
+**Files created/modified:**
+```
+src/skill/parser.rs      # Added SkillTier enum with serde support
+src/skill/indexer.rs     # Uses tier from frontmatter
+src/commands/context.rs  # Loads all core-tier skills at injection
 ```
 
 ---
