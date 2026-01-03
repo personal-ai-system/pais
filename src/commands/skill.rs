@@ -15,6 +15,7 @@ use crate::skill::loader::{discover_plugin_skills, discover_simple_skills, load_
 use crate::skill::parser::{SkillMetadata, parse_skill_md};
 use crate::skill::scanner::{DiscoveredSkill, scan_for_skills};
 use crate::skill::template::generate_skill_template;
+use crate::skill::workflow::{discover_workflows, load_workflow};
 use crate::skill::{Skill, SkillSource};
 
 /// Run a skill subcommand
@@ -35,6 +36,11 @@ pub fn run(action: SkillAction, config: &Config) -> Result<()> {
             format,
         } => scan_skills(path, depth, register, OutputFormat::resolve(format), config),
         SkillAction::Index { format } => generate_skill_index(OutputFormat::resolve(format), config),
+        SkillAction::Workflow {
+            skill,
+            workflow,
+            format,
+        } => show_workflow(&skill, workflow.as_deref(), OutputFormat::resolve(format), config),
     }
 }
 
@@ -606,4 +612,125 @@ fn truncate_desc(desc: &str, max_len: usize) -> String {
     } else {
         format!("{}...", &desc[..max_len - 3])
     }
+}
+
+/// Show or list workflows for a skill
+fn show_workflow(skill_name: &str, workflow: Option<&str>, format: OutputFormat, config: &Config) -> Result<()> {
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    let plugins_dir = Config::expand_path(&config.paths.plugins);
+
+    // Find the skill directory
+    let skill_dir = {
+        let simple_path = skills_dir.join(skill_name);
+        let plugin_path = plugins_dir.join(skill_name);
+
+        if simple_path.exists() && simple_path.join("SKILL.md").exists() {
+            simple_path
+        } else if plugin_path.exists() && plugin_path.join("SKILL.md").exists() {
+            plugin_path
+        } else {
+            eyre::bail!("Skill '{}' not found", skill_name);
+        }
+    };
+
+    // Discover workflows for this skill
+    let workflows = discover_workflows(&skill_dir).context("Failed to discover workflows")?;
+
+    match workflow {
+        Some(query) => {
+            // Load and output specific workflow
+            if let Some(route) = workflows.find_workflow(query) {
+                let content = load_workflow(&skill_dir, &route.workflow)
+                    .with_context(|| format!("Failed to load workflow '{}'", route.workflow))?;
+
+                match format {
+                    OutputFormat::Text => {
+                        println!("{}", content);
+                    }
+                    OutputFormat::Json => {
+                        #[derive(serde::Serialize)]
+                        struct WorkflowOutput {
+                            skill: String,
+                            intent: String,
+                            path: String,
+                            content: String,
+                        }
+                        let output = WorkflowOutput {
+                            skill: skill_name.to_string(),
+                            intent: route.intent.clone(),
+                            path: route.workflow.clone(),
+                            content,
+                        };
+                        println!("{}", serde_json::to_string_pretty(&output)?);
+                    }
+                    OutputFormat::Yaml => {
+                        #[derive(serde::Serialize)]
+                        struct WorkflowOutput {
+                            skill: String,
+                            intent: String,
+                            path: String,
+                            content: String,
+                        }
+                        let output = WorkflowOutput {
+                            skill: skill_name.to_string(),
+                            intent: route.intent.clone(),
+                            path: route.workflow.clone(),
+                            content,
+                        };
+                        println!("{}", serde_yaml::to_string(&output)?);
+                    }
+                }
+            } else {
+                eyre::bail!(
+                    "No workflow matching '{}' found for skill '{}'\nAvailable workflows: {}",
+                    query,
+                    skill_name,
+                    workflows
+                        .routes
+                        .iter()
+                        .map(|r| r.intent.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+            }
+        }
+        None => {
+            // List all workflows
+            match format {
+                OutputFormat::Text => {
+                    if workflows.routes.is_empty() {
+                        println!("No workflows defined for skill '{}'", skill_name);
+                        println!();
+                        println!("To add workflows, create a 'workflows/' directory and add .md files.");
+                        println!("Then add a '## Workflow Routing' section to SKILL.md:");
+                        println!();
+                        println!("  ## Workflow Routing");
+                        println!();
+                        println!("  | Intent | Workflow |");
+                        println!("  |--------|----------|");
+                        println!("  | new project | workflows/new-project.md |");
+                        return Ok(());
+                    }
+
+                    println!("Workflows for skill '{}':", skill_name);
+                    println!();
+                    println!("| Intent | Workflow |");
+                    println!("|--------|----------|");
+                    for route in &workflows.routes {
+                        println!("| {} | {} |", route.intent, route.workflow);
+                    }
+                    println!();
+                    println!("Use: pais skill workflow {} \"<intent>\"", skill_name);
+                }
+                OutputFormat::Json => {
+                    println!("{}", serde_json::to_string_pretty(&workflows)?);
+                }
+                OutputFormat::Yaml => {
+                    println!("{}", serde_yaml::to_string(&workflows)?);
+                }
+            }
+        }
+    }
+
+    Ok(())
 }

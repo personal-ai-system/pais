@@ -16,6 +16,7 @@ use std::fs;
 use std::path::Path;
 
 use super::parser::parse_skill_md;
+use super::workflow::{WorkflowRoute, discover_workflows};
 
 /// A skill entry in the index
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,6 +31,9 @@ pub struct SkillIndexEntry {
     pub triggers: Vec<String>,
     /// Loading tier: "core" (always loaded) or "deferred" (loaded on match)
     pub tier: String,
+    /// Available workflows for this skill
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub workflows: Vec<WorkflowRoute>,
 }
 
 /// The complete skill index
@@ -140,12 +144,16 @@ pub fn generate_index(skills_dir: &Path) -> Result<SkillIndex> {
 
                 let triggers = extract_triggers(&metadata.description);
 
+                // Discover workflows for this skill
+                let workflows = discover_workflows(&path).map(|w| w.routes).unwrap_or_default();
+
                 let entry = SkillIndexEntry {
                     name: metadata.name.clone(),
                     path: relative_path,
                     description: metadata.description.clone(),
                     triggers,
                     tier: tier.to_string(),
+                    workflows,
                 };
 
                 if tier == "core" {
@@ -187,7 +195,7 @@ pub fn generate_context_snippet(index: &SkillIndex, skills_dir: &Path) -> String
     let mut skills: Vec<_> = index.skills.values().collect();
     skills.sort_by(|a, b| a.name.cmp(&b.name));
 
-    for skill in skills {
+    for skill in &skills {
         let triggers_str = if skill.triggers.is_empty() {
             "-".to_string()
         } else {
@@ -204,7 +212,37 @@ pub fn generate_context_snippet(index: &SkillIndex, skills_dir: &Path) -> String
         lines.push(format!("| **{}** | {} | {} |", skill.name, desc, triggers_str));
     }
 
-    lines.push(String::new());
+    // Add workflow routing section if any skills have workflows
+    let skills_with_workflows: Vec<_> = skills.iter().filter(|s| !s.workflows.is_empty()).collect();
+
+    if !skills_with_workflows.is_empty() {
+        lines.push(String::new());
+        lines.push("## Workflow Routing".to_string());
+        lines.push(String::new());
+        lines.push("Some skills have specific workflows for common tasks:".to_string());
+        lines.push(String::new());
+
+        for skill in skills_with_workflows {
+            lines.push(format!("### {}", skill.name));
+            lines.push(String::new());
+            lines.push("| Intent | Workflow |".to_string());
+            lines.push("|--------|----------|".to_string());
+
+            for route in &skill.workflows {
+                lines.push(format!("| {} | `{}` |", route.intent, route.workflow));
+            }
+            lines.push(String::new());
+        }
+
+        lines.push("When a request matches a workflow intent:".to_string());
+        lines.push(format!(
+            "1. Read the workflow file from `{}/[skill-name]/[workflow-path]`",
+            skills_dir.display()
+        ));
+        lines.push("2. Follow the step-by-step instructions in the workflow".to_string());
+        lines.push(String::new());
+    }
+
     lines.push("## Routing Instructions".to_string());
     lines.push(String::new());
     lines.push("When a user request matches a skill's triggers:".to_string());

@@ -304,6 +304,19 @@ pub enum SkillAction {
         #[arg(long, short = 'o', value_enum)]
         format: Option<OutputFormat>,
     },
+
+    /// Show or list workflows for a skill
+    Workflow {
+        /// Skill name
+        skill: String,
+
+        /// Workflow name/intent (if omitted, lists available workflows)
+        workflow: Option<String>,
+
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
 }
 
 #[derive(Subcommand)]

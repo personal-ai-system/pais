@@ -19,6 +19,7 @@ pub mod loader;
 pub mod parser;
 pub mod scanner;
 pub mod template;
+pub mod workflow;
 
 /// A skill that teaches Claude how to do something
 #[derive(Debug, Clone)]

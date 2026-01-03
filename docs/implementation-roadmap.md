@@ -7,12 +7,14 @@
 | Feature | Status | Implementation |
 |---------|--------|----------------|
 | Context Injection | ✅ | `pais context inject` outputs `<system-reminder>` |
-| Skill Index | ✅ | `pais skill index` generates `skill-index.json` + `context-snippet.md` |
+| Skill Index | ✅ | `pais skill index` generates `skill-index.yaml` + `context-snippet.md` |
 | USE WHEN Triggers | ✅ | Extracted from skill descriptions |
 | Security Validation | ✅ | `src/hook/security.rs` with 3 pattern categories |
 | Skill Sync | ✅ | `pais sync` symlinks to `~/.claude/skills/` |
 | CLI Infrastructure | ✅ | Comprehensive command structure |
 | Simple Skills | ✅ | SKILL.md with frontmatter |
+| CORE Skill (Phase 1.1) | ✅ | `~/.config/pais/skills/core/SKILL.md` - always loaded first |
+| YAML Migration | ✅ | All config now YAML (`pais.yaml`, `plugin.yaml`, `skill-index.yaml`) |
 
 ---
 
@@ -20,35 +22,34 @@
 
 **Goal:** Implement Tier 0 (CORE) skill that's always present, plus workflow routing.
 
-### 1.1 CORE Skill Creation
+### 1.1 CORE Skill Creation ✅ DONE
 
 Create a special CORE skill that defines your AI identity and is always injected.
 
 **Tasks:**
-- [ ] Create `~/.config/pais/skills/CORE/SKILL.md` with:
-  - Identity/personality definition
-  - Response format preferences
-  - Operating principles
-  - Skill routing instructions
-- [ ] Update `pais context inject` to always include CORE content first
-- [ ] Add `core_skills` config option in `pais.toml` to specify always-loaded skills
+- [x] Create `~/.config/pais/skills/core/SKILL.md` with:
+  - Operating principles (blunt, concise, no estimates)
+  - Code preferences (no magic numbers, no obvious comments, >80% coverage)
+  - Workflow rules (never commit without permission, ask on ambiguity)
+  - Forbidden behaviors (no filler phrases, no unsolicited refactoring)
+- [x] Update `pais context inject` to always include CORE content first
+- [ ] ~~Add `core_skills` config option~~ (hardcoded to `core/` for now)
 
-**Files to create/modify:**
+**Files created/modified:**
 ```
-~/.config/pais/skills/CORE/SKILL.md    # New
-src/commands/context.rs                 # Modify - load CORE first
-src/config.rs                          # Modify - add core_skills list
+~/.config/pais/skills/core/SKILL.md    # Created
+src/commands/context.rs                 # Modified - loads core first
 ```
 
-### 1.2 Workflow Routing
+### 1.2 Workflow Routing ✅ DONE
 
 Enable skills to route to specific workflow files for step-by-step procedures.
 
 **Tasks:**
-- [ ] Add `Workflows/` directory support to skill structure
-- [ ] Parse workflow routing table from SKILL.md body
-- [ ] Update context snippet to include workflow hints
-- [ ] Add `pais skill workflow <skill> <workflow>` command to output specific workflow
+- [x] Add `workflows/` directory support to skill structure
+- [x] Parse workflow routing table from SKILL.md body
+- [x] Update context snippet to include workflow hints
+- [x] Add `pais skill workflow <skill> <workflow>` command to output specific workflow
 
 **Example SKILL.md with workflows:**
 ```markdown
@@ -61,16 +62,18 @@ description: Write Rust code. USE WHEN creating CLIs, libraries.
 
 | Intent | Workflow |
 |--------|----------|
-| new CLI project | Workflows/NewCli.md |
-| add error handling | Workflows/ErrorHandling.md |
-| write tests | Workflows/Testing.md |
+| new CLI project | workflows/new-cli.md |
+| add error handling | workflows/error-handling.md |
+| write tests | workflows/testing.md |
 ```
 
-**Files to create/modify:**
+**Files created/modified:**
 ```
-src/skill/workflow.rs                  # New - workflow parsing/loading
-src/commands/skill.rs                  # Modify - add workflow subcommand
-src/cli.rs                             # Modify - add workflow action
+src/skill/workflow.rs                  # Created - workflow parsing/loading
+src/commands/skill.rs                  # Modified - added workflow subcommand
+src/cli.rs                             # Modified - added workflow action
+src/skill/indexer.rs                   # Modified - workflows in index/context
+~/.config/pais/skills/rust-coder/workflows/new-cli.md  # Example workflow
 ```
 
 ### 1.3 Tiered Loading Implementation
@@ -189,7 +192,7 @@ src/cli.rs                             # Modify - add subcommands
   - Tier 9: Data exfiltration (tar | curl)
   - Tier 10: PAIS-specific protection
 - [ ] Implement action types: `block`, `warn`, `confirm`, `log`
-- [ ] Add configurable security levels in `pais.toml`
+- [ ] Add configurable security levels in `pais.yaml`
 
 **Files to modify:**
 ```
@@ -221,12 +224,14 @@ src/commands/security.rs               # New - security CLI commands
 **Tasks:**
 - [ ] Implement event emitter that can send to multiple sinks
 - [ ] Support sinks: file (JSONL), stdout, HTTP endpoint
-- [ ] Configure via `pais.toml`:
-  ```toml
-  [observability]
-  enabled = true
-  sinks = ["file", "http"]
-  http_endpoint = "http://localhost:4000/events"
+- [ ] Configure via `pais.yaml`:
+  ```yaml
+  observability:
+    enabled: true
+    sinks:
+      - file
+      - http
+    http_endpoint: http://localhost:4000/events
   ```
 
 **Files to create/modify:**
@@ -363,27 +368,29 @@ src/architecture.rs                    # New - architecture doc generation
 
 **Goal:** Enable third-party plugins with full hook/contract support.
 
-### 7.1 Plugin Manifest (plugin.toml)
+### 7.1 Plugin Manifest (plugin.yaml)
 
 **Tasks:**
-- [ ] Finalize plugin.toml schema:
-  ```toml
-  [plugin]
-  name = "my-plugin"
-  version = "1.0.0"
-  description = "Does something cool"
+- [ ] Finalize plugin.yaml schema:
+  ```yaml
+  plugin:
+    name: my-plugin
+    version: 1.0.0
+    description: Does something cool
 
-  [hooks]
-  PreToolUse = "hooks/validate.py"
-  Stop = "hooks/capture.py"
+  hooks:
+    PreToolUse: hooks/validate.py
+    Stop: hooks/capture.py
 
-  [contract]
-  consumes = ["bash-output"]
-  produces = ["analysis-report"]
+  contract:
+    consumes:
+      - bash-output
+    produces:
+      - analysis-report
 
-  [build]
-  type = "python"  # or "rust"
-  entrypoint = "src/main.py"
+  build:
+    type: python  # or rust
+    entrypoint: src/main.py
   ```
 - [ ] Implement manifest parsing
 - [ ] Validate hook/contract references
