@@ -21,6 +21,7 @@ pub fn generate_skill_template(name: &str) -> String {
         r#"---
 name: {name}
 description: "Brief description of what this skill does"
+allowed-tools: Bash({name}:*)
 tags: []
 ---
 
@@ -31,21 +32,32 @@ tags: []
 - [When should Claude activate this skill?]
 - [What user requests or contexts trigger this?]
 
-## INSTRUCTIONS
+## SYNTAX DISCOVERY
 
-[Detailed instructions for Claude when this skill is active]
+For CLI tools, ALWAYS discover exact syntax via --help:
 
-1. [Step or guideline 1]
-2. [Step or guideline 2]
-3. [Step or guideline 3]
+```bash
+{name} --help                    # List all commands
+{name} <command> --help          # Command-specific options
+```
 
-## EXAMPLES
+Do NOT memorize examples from this file - they may drift out of sync.
+Run --help to get current, accurate syntax.
 
-### Example 1: [Scenario]
+## CORE CONCEPTS
 
-**User:** [Example user request]
+[Describe WHAT the tool does and WHY, not detailed HOW]
 
-**Response approach:** [How Claude should respond]
+- [Key concept 1]
+- [Key concept 2]
+
+## WORKFLOW
+
+[Describe the typical workflow/stages, not exact commands]
+
+1. [Discovery/planning phase]
+2. [Execution phase]
+3. [Verification/cleanup phase]
 
 ## NOTES
 
@@ -67,7 +79,11 @@ mod tests {
         assert!(template.contains("name: terraform"));
         assert!(template.contains("# Terraform"));
         assert!(template.contains("## USE WHEN"));
-        assert!(template.contains("## INSTRUCTIONS"));
+        assert!(template.contains("## SYNTAX DISCOVERY"));
+        assert!(template.contains("## CORE CONCEPTS"));
+        assert!(template.contains("## WORKFLOW"));
+        assert!(template.contains("terraform --help"));
+        assert!(template.contains("allowed-tools: Bash(terraform:*)"));
     }
 
     #[test]
