@@ -72,14 +72,14 @@ pub fn has_skill_md(dir: &Path) -> bool {
     dir.join("SKILL.md").exists()
 }
 
-/// Check if a directory is a simple skill (SKILL.md but no plugin.toml)
+/// Check if a directory is a simple skill (SKILL.md but no plugin.yaml)
 pub fn is_simple_skill(dir: &Path) -> bool {
-    has_skill_md(dir) && !dir.join("plugin.toml").exists()
+    has_skill_md(dir) && !dir.join("plugin.yaml").exists()
 }
 
-/// Check if a directory is a full plugin (has plugin.toml)
+/// Check if a directory is a full plugin (has plugin.yaml)
 pub fn is_plugin(dir: &Path) -> bool {
-    dir.join("plugin.toml").exists()
+    dir.join("plugin.yaml").exists()
 }
 
 #[cfg(test)]

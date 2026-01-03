@@ -31,7 +31,7 @@ impl Registry {
     pub fn load(source: &str) -> eyre::Result<Self> {
         // TODO: Handle URL sources (git repos, HTTP)
         let content = std::fs::read_to_string(source)?;
-        let registry: Self = toml::from_str(&content)?;
+        let registry: Self = serde_yaml::from_str(&content)?;
         Ok(registry)
     }
 

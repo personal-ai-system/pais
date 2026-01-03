@@ -171,7 +171,7 @@ fn count_plugins(dir: &std::path::Path) -> usize {
         .map(|entries| {
             entries
                 .filter_map(|e| e.ok())
-                .filter(|e| e.path().join("plugin.toml").exists())
+                .filter(|e| e.path().join("plugin.yaml").exists())
                 .count()
         })
         .unwrap_or(0)

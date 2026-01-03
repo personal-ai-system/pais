@@ -127,7 +127,7 @@ pub fn run(path: Option<PathBuf>, force: bool, no_git: bool) -> Result<()> {
     println!("{} Initializing PAIS in {}", "→".blue(), pais_dir.display());
 
     // Check if already initialized
-    let config_file = pais_dir.join("pais.toml");
+    let config_file = pais_dir.join("pais.yaml");
     if config_file.exists() && !force {
         println!("  {} PAIS already initialized at {}", "✓".green(), pais_dir.display());
         println!("  Use {} to reinitialize", "--force".cyan());
@@ -152,9 +152,9 @@ pub fn run(path: Option<PathBuf>, force: bool, no_git: bool) -> Result<()> {
 
     // Generate default config
     let config = Config::default();
-    let toml_str = toml::to_string_pretty(&config).context("Failed to serialize config")?;
-    fs::write(&config_file, toml_str).context("Failed to write pais.toml")?;
-    println!("  {} Created pais.toml", "✓".green());
+    let yaml_str = serde_yaml::to_string(&config).context("Failed to serialize config")?;
+    fs::write(&config_file, yaml_str).context("Failed to write pais.yaml")?;
+    println!("  {} Created pais.yaml", "✓".green());
 
     // Create .gitignore
     let gitignore_path = pais_dir.join(".gitignore");

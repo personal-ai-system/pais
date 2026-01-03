@@ -1,4 +1,4 @@
-//! Plugin manifest parsing (plugin.toml)
+//! Plugin manifest parsing (plugin.yaml)
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -92,7 +92,7 @@ pub struct ConfigSpec {
     #[serde(default)]
     pub required: bool,
 
-    pub default: Option<toml::Value>,
+    pub default: Option<serde_yaml::Value>,
 
     pub env: Option<String>,
 
@@ -141,16 +141,16 @@ pub enum BuildType {
 }
 
 impl PluginManifest {
-    /// Load a manifest from a TOML file
+    /// Load a manifest from a YAML file
     pub fn load<P: AsRef<Path>>(path: P) -> eyre::Result<Self> {
         let content = std::fs::read_to_string(&path)?;
-        let manifest: Self = toml::from_str(&content)?;
+        let manifest: Self = serde_yaml::from_str(&content)?;
         Ok(manifest)
     }
 
-    /// Parse a manifest from TOML string
+    /// Parse a manifest from YAML string
     pub fn from_str(content: &str) -> eyre::Result<Self> {
-        let manifest: Self = toml::from_str(content)?;
+        let manifest: Self = serde_yaml::from_str(content)?;
         Ok(manifest)
     }
 }
@@ -160,40 +160,45 @@ mod tests {
     use super::*;
 
     const MINIMAL_MANIFEST: &str = r#"
-[plugin]
-name = "test-plugin"
-version = "0.1.0"
-description = "A test plugin"
+plugin:
+  name: test-plugin
+  version: 0.1.0
+  description: A test plugin
 "#;
 
     const FULL_MANIFEST: &str = r#"
-[plugin]
-name = "full-plugin"
-version = "1.2.3"
-description = "A fully configured plugin"
-authors = ["Test Author <test@example.com>"]
-language = "rust"
-license = "MIT"
-repository = "https://github.com/example/plugin"
-keywords = ["test", "example"]
+plugin:
+  name: full-plugin
+  version: 1.2.3
+  description: A fully configured plugin
+  authors:
+    - Test Author <test@example.com>
+  language: rust
+  license: MIT
+  repository: https://github.com/example/plugin
+  keywords:
+    - test
+    - example
 
-[pais]
-core_version = ">=0.1.0"
+pais:
+  core_version: ">=0.1.0"
 
-[provides.memory]
-contract = "MemoryProvider"
-service = "sqlite-memory"
+provides:
+  memory:
+    contract: MemoryProvider
+    service: sqlite-memory
 
-[consumes.config]
-contract = "ConfigProvider"
-optional = true
+consumes:
+  config:
+    contract: ConfigProvider
+    optional: true
 
-[hooks]
-pre_tool_use = true
-stop = true
+hooks:
+  pre_tool_use: true
+  stop: true
 
-[build]
-type = "cargo"
+build:
+  type: cargo
 "#;
 
     #[test]
@@ -245,20 +250,20 @@ type = "cargo"
 
     #[test]
     fn test_consume_spec_optional() {
-        let toml_str = r#"
-[plugin]
-name = "test"
-version = "0.1.0"
-description = "test"
+        let yaml_str = r#"
+plugin:
+  name: test
+  version: 0.1.0
+  description: test
 
-[consumes.optional_dep]
-contract = "SomeContract"
-optional = true
-
-[consumes.required_dep]
-contract = "OtherContract"
+consumes:
+  optional_dep:
+    contract: SomeContract
+    optional: true
+  required_dep:
+    contract: OtherContract
 "#;
-        let manifest = PluginManifest::from_str(toml_str).unwrap();
+        let manifest = PluginManifest::from_str(yaml_str).unwrap();
         assert!(manifest.consumes["optional_dep"].optional);
         assert!(!manifest.consumes["required_dep"].optional);
     }
@@ -266,8 +271,8 @@ contract = "OtherContract"
     #[test]
     fn test_manifest_serialization_roundtrip() {
         let manifest = PluginManifest::from_str(FULL_MANIFEST).unwrap();
-        let toml_str = toml::to_string(&manifest).unwrap();
-        let reparsed = PluginManifest::from_str(&toml_str).unwrap();
+        let yaml_str = serde_yaml::to_string(&manifest).unwrap();
+        let reparsed = PluginManifest::from_str(&yaml_str).unwrap();
         assert_eq!(reparsed.plugin.name, manifest.plugin.name);
         assert_eq!(reparsed.plugin.version, manifest.plugin.version);
     }

@@ -2,13 +2,13 @@
 //!
 //! This module handles:
 //! - Discovering skills from SKILL.md files
-//! - Skills can exist without a plugin.toml (simple skills)
+//! - Skills can exist without a plugin.yaml (simple skills)
 //! - Skills can also be part of full plugins
 //!
 //! # Simple Skills vs Plugin Skills
 //!
 //! - **Simple Skills**: Just SKILL.md, no executable code
-//! - **Plugin Skills**: Part of a plugin with plugin.toml, contracts, hooks
+//! - **Plugin Skills**: Part of a plugin with plugin.yaml, contracts, hooks
 
 #![allow(dead_code)]
 
@@ -36,7 +36,7 @@ pub struct Skill {
 /// Where a skill was discovered from
 #[derive(Debug, Clone, PartialEq)]
 pub enum SkillSource {
-    /// Simple skill - just SKILL.md, no plugin.toml
+    /// Simple skill - just SKILL.md, no plugin.yaml
     Simple,
     /// Part of a full plugin
     Plugin(String),

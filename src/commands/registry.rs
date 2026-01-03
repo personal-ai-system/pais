@@ -93,11 +93,11 @@ fn add(name: &str, url: &str, config: &Config) -> Result<()> {
     new_config.registries.insert(name.to_string(), url.to_string());
 
     // Save config
-    let config_path = Config::pais_dir().join("pais.toml");
+    let config_path = Config::pais_dir().join("pais.yaml");
     fs::create_dir_all(config_path.parent().unwrap())?;
 
-    let toml_str = toml::to_string_pretty(&new_config).context("Failed to serialize config")?;
-    fs::write(&config_path, toml_str).context("Failed to write config file")?;
+    let yaml_str = serde_yaml::to_string(&new_config).context("Failed to serialize config")?;
+    fs::write(&config_path, yaml_str).context("Failed to write config file")?;
 
     println!("  {} Added registry: {}", "✓".green(), name);
 
@@ -117,9 +117,9 @@ fn remove(name: &str, config: &Config) -> Result<()> {
     new_config.registries.remove(name);
 
     // Save config
-    let config_path = Config::pais_dir().join("pais.toml");
-    let toml_str = toml::to_string_pretty(&new_config).context("Failed to serialize config")?;
-    fs::write(&config_path, toml_str).context("Failed to write config file")?;
+    let config_path = Config::pais_dir().join("pais.yaml");
+    let yaml_str = serde_yaml::to_string(&new_config).context("Failed to serialize config")?;
+    fs::write(&config_path, yaml_str).context("Failed to write config file")?;
 
     // Remove cached listing if exists
     let registries_dir = Config::expand_path(&config.paths.registries);
@@ -237,7 +237,7 @@ fn search(query: &str, format: OutputFormat, config: &Config) -> Result<()> {
                     .to_string();
 
                 let content = fs::read_to_string(&path).context("Failed to read registry file")?;
-                let registry: RegistryFile = toml::from_str(&content).context("Failed to parse registry file")?;
+                let registry: RegistryFile = serde_yaml::from_str(&content).context("Failed to parse registry file")?;
 
                 // Search plugins
                 for plugin in registry.plugins {
@@ -338,7 +338,7 @@ fn show(name: &str, format: OutputFormat, config: &Config) -> Result<()> {
     }
 
     let content = fs::read_to_string(&cache_file).context("Failed to read registry file")?;
-    let registry: RegistryFile = toml::from_str(&content).context("Failed to parse registry file")?;
+    let registry: RegistryFile = serde_yaml::from_str(&content).context("Failed to parse registry file")?;
 
     match format {
         OutputFormat::Json => {

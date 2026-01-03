@@ -24,7 +24,7 @@ pub fn run(format: OutputFormat, config: &Config) -> Result<()> {
         std::fs::read_dir(&plugins_dir)?
             .filter_map(|e| e.ok())
             .filter(|e| e.path().is_dir()) // is_dir() follows symlinks
-            .filter(|e| e.path().join("plugin.toml").exists())
+            .filter(|e| e.path().join("plugin.yaml").exists())
             .count()
     } else {
         0
@@ -65,7 +65,7 @@ pub fn run(format: OutputFormat, config: &Config) -> Result<()> {
                     let path = entry.path();
                     if path.is_dir() {
                         // is_dir() follows symlinks
-                        let manifest = path.join("plugin.toml");
+                        let manifest = path.join("plugin.yaml");
                         if manifest.exists() {
                             let name = entry.file_name();
                             println!("  {} {}", "✓".green(), name.to_string_lossy());

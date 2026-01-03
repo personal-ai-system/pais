@@ -10,17 +10,9 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Config {
-    pub pais: PaisConfig,
     pub paths: PathsConfig,
-    pub defaults: DefaultsConfig,
     pub registries: HashMap<String, String>,
     pub hooks: HooksConfig,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(default)]
-pub struct PaisConfig {
-    pub version: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -30,13 +22,6 @@ pub struct PathsConfig {
     pub skills: PathBuf,
     pub history: PathBuf,
     pub registries: PathBuf,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(default)]
-pub struct DefaultsConfig {
-    pub language: String,
-    pub log_level: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -51,27 +36,17 @@ impl Default for Config {
         let pais_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("pais");
 
         Self {
-            pais: PaisConfig::default(),
             paths: PathsConfig {
                 plugins: pais_dir.join("plugins"),
                 skills: pais_dir.join("skills"),
                 history: pais_dir.join("history"),
                 registries: pais_dir.join("registries"),
             },
-            defaults: DefaultsConfig::default(),
             registries: HashMap::from([(
                 "core".to_string(),
-                "https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.toml".to_string(),
+                "https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.yaml".to_string(),
             )]),
             hooks: HooksConfig::default(),
-        }
-    }
-}
-
-impl Default for PaisConfig {
-    fn default() -> Self {
-        Self {
-            version: env!("CARGO_PKG_VERSION").to_string(),
         }
     }
 }
@@ -85,15 +60,6 @@ impl Default for PathsConfig {
             skills: pais_dir.join("skills"),
             history: pais_dir.join("history"),
             registries: pais_dir.join("registries"),
-        }
-    }
-}
-
-impl Default for DefaultsConfig {
-    fn default() -> Self {
-        Self {
-            language: "python".to_string(),
-            log_level: "info".to_string(),
         }
     }
 }
@@ -128,9 +94,9 @@ impl Config {
             }
         }
 
-        // Try PAIS_DIR/pais.toml
+        // Try PAIS_DIR/pais.yaml
         if let Ok(pais_dir) = std::env::var("PAIS_DIR") {
-            let path = PathBuf::from(pais_dir).join("pais.toml");
+            let path = PathBuf::from(pais_dir).join("pais.yaml");
             if path.exists() {
                 match Self::load_from_file(&path) {
                     Ok(config) => return Ok(config),
@@ -141,9 +107,9 @@ impl Config {
             }
         }
 
-        // Try ~/.config/pais/pais.toml
+        // Try ~/.config/pais/pais.yaml
         if let Some(config_dir) = dirs::config_dir() {
-            let path = config_dir.join("pais").join("pais.toml");
+            let path = config_dir.join("pais").join("pais.yaml");
             if path.exists() {
                 match Self::load_from_file(&path) {
                     Ok(config) => return Ok(config),
@@ -154,8 +120,8 @@ impl Config {
             }
         }
 
-        // Try ./pais.toml (for development)
-        let local_config = PathBuf::from("pais.toml");
+        // Try ./pais.yaml (for development)
+        let local_config = PathBuf::from("pais.yaml");
         if local_config.exists() {
             match Self::load_from_file(&local_config) {
                 Ok(config) => return Ok(config),
@@ -173,7 +139,7 @@ impl Config {
     fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = fs::read_to_string(&path).context("Failed to read config file")?;
 
-        let config: Self = toml::from_str(&content).context("Failed to parse config file")?;
+        let config: Self = serde_yaml::from_str(&content).context("Failed to parse config file")?;
 
         log::info!("Loaded config from: {}", path.as_ref().display());
         Ok(config)
@@ -201,25 +167,9 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = Config::default();
-        assert!(!config.pais.version.is_empty());
-        assert_eq!(config.defaults.language, "python");
-        assert_eq!(config.defaults.log_level, "info");
         assert!(config.hooks.security_enabled);
         assert!(config.hooks.history_enabled);
         assert!(config.registries.contains_key("core"));
-    }
-
-    #[test]
-    fn test_default_pais_config() {
-        let config = PaisConfig::default();
-        assert!(!config.version.is_empty());
-    }
-
-    #[test]
-    fn test_default_defaults_config() {
-        let config = DefaultsConfig::default();
-        assert_eq!(config.language, "python");
-        assert_eq!(config.log_level, "info");
     }
 
     #[test]
@@ -284,10 +234,10 @@ mod tests {
     #[test]
     fn test_config_serialization_roundtrip() {
         let config = Config::default();
-        let toml_str = toml::to_string(&config).expect("Failed to serialize");
-        let parsed: Config = toml::from_str(&toml_str).expect("Failed to deserialize");
-        assert_eq!(parsed.pais.version, config.pais.version);
-        assert_eq!(parsed.defaults.language, config.defaults.language);
+        let yaml_str = serde_yaml::to_string(&config).expect("Failed to serialize");
+        let parsed: Config = serde_yaml::from_str(&yaml_str).expect("Failed to deserialize");
+        assert_eq!(parsed.hooks.security_enabled, config.hooks.security_enabled);
+        assert_eq!(parsed.registries.len(), config.registries.len());
     }
 
     #[test]

@@ -2,7 +2,7 @@
 //!
 //! This module handles:
 //! - Discovering plugins from the plugins directory
-//! - Parsing plugin manifests (plugin.toml)
+//! - Parsing plugin manifests (plugin.yaml)
 //! - Loading and initializing plugins
 //! - Managing plugin lifecycle
 
@@ -48,7 +48,7 @@ impl PluginManager {
 
     /// Discover all plugins in the plugins directory
     pub fn discover(&mut self) -> eyre::Result<()> {
-        // TODO: Scan plugins_dir for plugin.toml files
+        // TODO: Scan plugins_dir for plugin.yaml files
         Ok(())
     }
 

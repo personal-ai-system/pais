@@ -156,8 +156,12 @@ Content here
         let plugin_dir = temp.path().join("incident");
         fs::create_dir_all(&plugin_dir).unwrap();
         create_skill_md(&plugin_dir, "incident", "Incident management");
-        // Add plugin.toml to make it a plugin
-        fs::write(plugin_dir.join("plugin.toml"), "[plugin]\nname = \"incident\"").unwrap();
+        // Add plugin.yaml to make it a plugin
+        fs::write(
+            plugin_dir.join("plugin.yaml"),
+            "plugin:\n  name: incident\n  version: 0.1.0\n  description: test",
+        )
+        .unwrap();
 
         let skill = load_plugin_skill(&plugin_dir, "incident").unwrap();
         assert_eq!(skill.name, "incident");

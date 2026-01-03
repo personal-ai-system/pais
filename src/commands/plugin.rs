@@ -90,7 +90,7 @@ fn list(format: OutputFormat, config: &Config) -> Result<()> {
         let path = entry.path();
 
         if path.is_dir() {
-            let manifest_path = path.join("plugin.toml");
+            let manifest_path = path.join("plugin.yaml");
             if manifest_path.exists() {
                 match load_plugin(&path) {
                     Ok(plugin) => plugins.push(plugin),
@@ -257,7 +257,7 @@ fn install_from_registry(name: &str, force: bool, config: &Config) -> Result<()>
 
             let content = fs::read_to_string(&path)?;
             let registry: RegistryFile =
-                toml::from_str(&content).context(format!("Failed to parse registry: {}", registry_name))?;
+                serde_yaml::from_str(&content).context(format!("Failed to parse registry: {}", registry_name))?;
 
             for plugin in registry.plugins {
                 if plugin.name == name {
@@ -414,9 +414,9 @@ fn update(name: &str, config: &Config) -> Result<()> {
             let entry = entry?;
             let path = entry.path();
 
-            if path.extension().is_some_and(|e| e == "toml") {
+            if path.extension().is_some_and(|e| e == "yaml" || e == "yml") {
                 let content = fs::read_to_string(&path)?;
-                if let Ok(registry) = toml::from_str::<RegistryFile>(&content) {
+                if let Ok(registry) = serde_yaml::from_str::<RegistryFile>(&content) {
                     for p in registry.plugins {
                         if p.name == name {
                             found_plugin = Some(p);
@@ -565,9 +565,9 @@ fn new(
     fs::create_dir_all(&output_path).context("Failed to create plugin directory")?;
     fs::create_dir_all(output_path.join("src")).context("Failed to create src directory")?;
 
-    // Generate plugin.toml
+    // Generate plugin.yaml
     let manifest_content = generate_manifest(name, language, plugin_type);
-    fs::write(output_path.join("plugin.toml"), manifest_content).context("Failed to write plugin.toml")?;
+    fs::write(output_path.join("plugin.yaml"), manifest_content).context("Failed to write plugin.yaml")?;
 
     // Generate main entry point based on language
     match language.to_lowercase().as_str() {
@@ -604,7 +604,7 @@ fn new(
     println!();
     println!("  Next steps:");
     println!("    1. cd {}", output_path.display());
-    println!("    2. Edit plugin.toml to configure contracts");
+    println!("    2. Edit plugin.yaml to configure contracts");
     if language == "python" {
         println!("    3. Implement your plugin in src/main.py");
     } else {
@@ -617,37 +617,37 @@ fn new(
 
 fn generate_manifest(name: &str, language: &str, plugin_type: &str) -> String {
     format!(
-        r#"[plugin]
-name = "{name}"
-version = "0.1.0"
-description = "A PAIS {plugin_type} plugin"
-authors = []
-language = "{language}"
-license = "MIT"
+        r#"plugin:
+  name: {name}
+  version: 0.1.0
+  description: A PAIS {plugin_type} plugin
+  authors: []
+  language: {language}
+  license: MIT
 
-[pais]
-core_version = ">=0.1.0"
+pais:
+  core_version: ">=0.1.0"
 
 # Contracts this plugin provides
-[provides]
+provides: {{}}
 
 # Contracts this plugin consumes (optional dependencies)
-[consumes]
+consumes: {{}}
 
 # Plugin configuration schema
-[config]
+config: {{}}
 
 # Hook subscriptions
-[hooks]
-pre_tool_use = false
-post_tool_use = false
-stop = false
-session_start = false
-session_end = false
+hooks:
+  pre_tool_use: false
+  post_tool_use: false
+  stop: false
+  session_start: false
+  session_end: false
 
 # Build configuration
-[build]
-type = "{build_type}"
+build:
+  type: {build_type}
 "#,
         name = name,
         plugin_type = plugin_type,

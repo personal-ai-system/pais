@@ -233,7 +233,7 @@ pub enum SkillAction {
         #[arg(long, short = 'o', value_enum)]
         format: Option<OutputFormat>,
 
-        /// Show only simple skills (no plugin.toml)
+        /// Show only simple skills (no plugin.yaml)
         #[arg(long)]
         simple: bool,
 

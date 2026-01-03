@@ -239,7 +239,7 @@ fn remove_skill(name: &str, force: bool, config: &Config) -> Result<()> {
     // Check if it's a plugin skill (can't remove those via skill remove)
     let plugins_dir = Config::expand_path(&config.paths.plugins);
     let plugin_path = plugins_dir.join(name);
-    if plugin_path.exists() && plugin_path.join("plugin.toml").exists() {
+    if plugin_path.exists() && plugin_path.join("plugin.yaml").exists() {
         eyre::bail!(
             "Skill '{}' is part of a plugin. Use 'pais plugin remove {}' instead.",
             name,
@@ -535,7 +535,7 @@ fn generate_skill_index(format: OutputFormat, config: &Config) -> Result<()> {
     let index = generate_index(&skills_dir).context("Failed to generate skill index")?;
 
     // Write the index file
-    let index_path = skills_dir.join("skill-index.json");
+    let index_path = skills_dir.join("skill-index.yaml");
     write_index(&index, &index_path).context("Failed to write skill index")?;
 
     match format {

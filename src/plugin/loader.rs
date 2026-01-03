@@ -8,10 +8,10 @@ use super::{Plugin, PluginState};
 /// Load a plugin from a directory
 pub fn load_plugin<P: AsRef<Path>>(path: P) -> eyre::Result<Plugin> {
     let path = path.as_ref();
-    let manifest_path = path.join("plugin.toml");
+    let manifest_path = path.join("plugin.yaml");
 
     if !manifest_path.exists() {
-        eyre::bail!("No plugin.toml found in {}", path.display());
+        eyre::bail!("No plugin.yaml found in {}", path.display());
     }
 
     let manifest = PluginManifest::load(&manifest_path)?;
