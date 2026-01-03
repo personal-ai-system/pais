@@ -68,6 +68,13 @@ src/
 4. **Colors** — Use `colored` crate for terminal output
 5. **Tests** — Add `#[cfg(test)]` module in same file
 
+## Naming Conventions
+
+- **Files/folders** — lowercase, hyphens (not underscores): `my-plugin`, `skill-loader.rs`
+- **YAML fields** — hyphens: `repo-dir`, `tool-preferences` (NOT `repo_dir`, `tool_preferences`)
+- **Rust/Python** — underscores per language convention (serde renames automatically)
+- **No TOML** — YAML for all human-readable config, JSON only for machine-only data
+
 ## Plugin System
 
 Plugins live in `~/.config/pais/plugins/<name>/` with:

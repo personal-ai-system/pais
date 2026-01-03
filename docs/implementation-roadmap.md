@@ -15,6 +15,7 @@
 | Simple Skills | ✅ | SKILL.md with frontmatter |
 | CORE Skill (Phase 1.1) | ✅ | `~/.config/pais/skills/core/SKILL.md` - always loaded first |
 | YAML Migration | ✅ | All config now YAML (`pais.yaml`, `plugin.yaml`, `skill-index.yaml`) |
+| Environment Awareness (Phase 10) | ✅ | `repos-dir`, `tool-preferences`, `tools` in config |
 
 ---
 
@@ -472,6 +473,111 @@ src/commands/run.rs    # Already exists
 
 ---
 
+## Phase 10: Environment Awareness ✅ DONE
+
+**Goal:** Teach Claude about the user's environment - where code lives, preferred tools, custom CLIs.
+
+### 10.1 Environment Configuration ✅
+
+**Add to `pais.yaml`:**
+```yaml
+environment:
+  repos-dir: ~/repos/
+  # All repos cloned as: {repos-dir}/{org}/{repo}
+
+  tool-preferences:
+    ls: eza
+    tree: eza --tree
+    grep: rg
+    find: fd
+    cat: bat
+
+  tools:
+    otto:
+      github: otto-rs/otto
+      description: "CI runner, task automation"
+    leeks:
+      github: scottidler/leeks
+      description: "Secret detection"
+    clone:
+      github: scottidler/clone
+      description: "Git clone to repos-dir/{org}/{repo}"
+```
+
+**Tasks:**
+- [x] Add `EnvironmentConfig` to `src/config.rs`
+- [x] Parse `tool-preferences` and `tools` maps
+- [x] Serde rename attributes for hyphen → underscore
+
+**Files modified:**
+```
+src/config.rs    # Add EnvironmentConfig, ToolConfig
+```
+
+### 10.2 CORE Skill Environment Injection ✅
+
+**Tasks:**
+- [x] Update `pais context inject` to include environment section
+- [x] Generate environment context from config:
+  - Repos location and structure
+  - Tool preferences (modern → legacy mappings)
+  - Available custom tools with descriptions
+- [x] Check tool availability at injection time
+
+**Injected context example:**
+```markdown
+## Environment
+
+### Repos
+All repositories are at `~/repos/{org}/{repo}`.
+Use `clone` to checkout new repos (e.g., `clone scottidler/otto`).
+
+### Preferred Tools
+Use modern alternatives when available:
+- `rg` instead of `grep` (faster, respects .gitignore)
+- `fd` instead of `find` (faster, saner defaults)
+- `eza` instead of `ls` (better output)
+- `bat` instead of `cat` (syntax highlighting)
+- `eza --tree` instead of `tree`
+
+Fallback to standard tools if modern ones unavailable.
+
+### Custom Tools
+- `otto` - CI/task runner (otto-rs/otto) ✓
+- `leeks` - secret scanning (scottidler/leeks) ✓
+- `clone` - smart git clone (scottidler/clone) ✓
+```
+
+**Files modified:**
+```
+src/commands/context.rs    # Add environment injection
+```
+
+### 10.3 Tool Availability Checking ✅
+
+**Tasks:**
+- [x] `pais doctor` checks all declared tools are in PATH
+- [x] Shows install hints (github URL) for missing tools
+- [x] Warns but doesn't fail for missing tools
+
+**Example output:**
+```
+Tools:
+  ✓ rg (rg 14.1.0)
+  ✓ fd (fd 9.0.0)
+  ✓ eza (eza 0.18.0)
+  ✓ otto (otto 0.1.0)
+  ✗ leeks (not found)
+    Install: cargo install --git https://github.com/scottidler/leeks
+```
+
+**Files modified:**
+```
+src/commands/doctor.rs    # Add tool checking
+```
+
+---
+
 ## Phase Summary
 
 | Phase | Focus | Priority |
@@ -485,8 +591,9 @@ src/commands/run.rs    # Already exists
 | 7 | Plugin System | Low |
 | 8 | System Status | Low |
 | 9 | Plugin Execution | Low |
+| 10 | Environment Awareness ✅ | Medium |
 
-**Recommended order:** Phase 1 → Phase 2 → Phase 3 → Phase 6 → Phase 4 → Phase 5 → Phase 7 → Phase 8 → Phase 9
+**Recommended order:** Phase 1 → Phase 2 → Phase 3 → Phase 6 → Phase 4 → Phase 5 → Phase 7 → Phase 8 → Phase 9 → Phase 10
 
 ---
 

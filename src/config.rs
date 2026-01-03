@@ -12,6 +12,7 @@ pub struct Config {
     pub registries: HashMap<String, String>,
     pub hooks: HooksConfig,
     pub observability: ObservabilityConfig,
+    pub environment: EnvironmentConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -73,6 +74,7 @@ impl Default for Config {
             )]),
             hooks: HooksConfig::default(),
             observability: ObservabilityConfig::default(),
+            environment: EnvironmentConfig::default(),
         }
     }
 }
@@ -109,6 +111,35 @@ impl Default for ObservabilityConfig {
             include_payload: false,
         }
     }
+}
+
+/// Environment awareness configuration
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct EnvironmentConfig {
+    /// Directory where repos are cloned (e.g., ~/repos/)
+    /// Repos are expected at: {repos-dir}/{org}/{repo}
+    pub repos_dir: Option<PathBuf>,
+
+    /// Modern tool preferences (e.g., ls -> eza, grep -> rg)
+    pub tool_preferences: HashMap<String, String>,
+
+    /// Custom tools with install info
+    pub tools: HashMap<String, ToolConfig>,
+}
+
+/// Configuration for a custom tool
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct ToolConfig {
+    /// GitHub repository (e.g., "scottidler/otto")
+    pub github: Option<String>,
+
+    /// Description of what the tool does
+    pub description: Option<String>,
+
+    /// Custom install command (defaults to cargo install --git)
+    pub install: Option<String>,
 }
 
 impl Config {
