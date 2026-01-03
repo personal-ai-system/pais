@@ -10,7 +10,7 @@
 //! - **Simple Skills**: Just SKILL.md, no executable code
 //! - **Plugin Skills**: Part of a plugin with plugin.yaml, contracts, hooks
 
-#![allow(dead_code)]
+#![allow(dead_code)] // Skill methods and discovery functions - for future skill commands
 
 use std::path::PathBuf;
 

@@ -3,6 +3,7 @@
 use super::{HookEvent, HookHandler, HookResult};
 
 /// Dispatch a hook event to all registered handlers
+#[allow(dead_code)] // Utility function for future handler composition
 pub fn dispatch(event: HookEvent, payload: &serde_json::Value, handlers: &[Box<dyn HookHandler>]) -> HookResult {
     for handler in handlers {
         if handler.handles(event) {

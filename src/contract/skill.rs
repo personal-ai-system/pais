@@ -2,6 +2,8 @@
 //!
 //! Plugins that provide Claude Code skills.
 
+#![allow(dead_code)] // Contract trait - pending plugin implementation
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 

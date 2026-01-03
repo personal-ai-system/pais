@@ -10,12 +10,12 @@ use crate::config::Config;
 use crate::plugin::loader::load_plugin;
 
 /// Registry plugin entry for lookup
-#[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 struct RegistryPlugin {
     name: String,
     #[serde(default)]
     version: Option<String>,
+    #[allow(dead_code)] // Deserialized from registry but not displayed
     #[serde(default)]
     description: Option<String>,
     #[serde(default)]
@@ -27,15 +27,15 @@ struct RegistryPlugin {
 /// Parsed registry file
 #[derive(Debug, Deserialize)]
 struct RegistryFile {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Deserialized but not directly accessed
     registry: RegistryMeta,
     #[serde(default)]
     plugins: Vec<RegistryPlugin>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct RegistryMeta {
+    #[allow(dead_code)] // Required for YAML structure but not accessed
     name: String,
 }
 

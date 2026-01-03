@@ -7,6 +7,8 @@
 //! - `learnings`: If contains problem-solving narratives
 //! - `sessions`: Default for regular work sessions
 
+#![allow(dead_code)] // with_agents_dir - for testing/custom config
+
 use std::path::PathBuf;
 
 use super::{HookEvent, HookHandler, HookResult};
@@ -37,7 +39,6 @@ impl HistoryHandler {
     }
 
     /// Set a custom agents directory
-    #[allow(dead_code)]
     pub fn with_agents_dir(mut self, agents_dir: PathBuf) -> Self {
         self.agents_dir = agents_dir;
         self

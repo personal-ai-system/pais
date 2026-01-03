@@ -1,5 +1,7 @@
 //! Event emitter with multiple sink support
 
+#![allow(dead_code)] // has_stdout_sink - for observe command deduplication
+
 use chrono::{Local, Utc};
 use colored::*;
 use serde::{Deserialize, Serialize};
@@ -168,7 +170,6 @@ impl EventEmitter {
 
 /// Check if observability is configured for stdout
 /// (useful for `pais observe` command to avoid duplicate output)
-#[allow(dead_code)]
 pub fn has_stdout_sink(config: &ObservabilityConfig) -> bool {
     config.enabled && config.sinks.contains(&ObservabilitySink::Stdout)
 }

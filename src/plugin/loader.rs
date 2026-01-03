@@ -1,5 +1,7 @@
 //! Plugin loading and initialization
 
+#![allow(dead_code)] // initialize_plugin - for future plugin lifecycle
+
 use std::path::Path;
 
 use super::manifest::PluginManifest;

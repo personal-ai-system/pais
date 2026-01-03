@@ -2,6 +2,8 @@
 //!
 //! Plugins that provide persistent memory/context storage.
 
+#![allow(dead_code)] // Contract trait - pending plugin implementation
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

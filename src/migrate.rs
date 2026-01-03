@@ -2,6 +2,8 @@
 //!
 //! Tracks PAIS config version using git tags and applies migrations when needed.
 
+#![allow(dead_code)] // needs_migration - for future auto-migration on startup
+
 use eyre::{Context, Result};
 use std::process::Command;
 
@@ -98,7 +100,6 @@ fn get_migrations() -> Vec<Box<dyn Migration>> {
 }
 
 /// Check if migrations are needed
-#[allow(dead_code)]
 pub fn needs_migration() -> Result<bool> {
     let current = get_current_version()?;
     Ok(current < CURRENT_VERSION)

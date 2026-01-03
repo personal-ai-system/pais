@@ -7,7 +7,7 @@
 //! - Executing plugin hooks
 //! - Managing plugin lifecycle
 
-#![allow(dead_code)] // Methods reserved for future use
+#![allow(dead_code)] // Plugin lifecycle states and methods - for full plugin management
 
 use eyre::{Context, Result};
 use std::collections::HashMap;

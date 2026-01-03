@@ -9,18 +9,20 @@ use crate::config::Config;
 /// Parsed registry file
 #[derive(Debug, Deserialize)]
 struct RegistryFile {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Deserialized but not directly accessed
     registry: RegistryMeta,
     #[serde(default)]
     plugins: Vec<PluginEntry>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct RegistryMeta {
+    #[allow(dead_code)] // Required for YAML structure but not accessed
     name: String,
+    #[allow(dead_code)]
     #[serde(default)]
     description: Option<String>,
+    #[allow(dead_code)]
     #[serde(default)]
     version: Option<String>,
 }

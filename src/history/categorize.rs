@@ -8,12 +8,12 @@
 
 /// Content category
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
 pub enum Category {
     Sessions,
     Learnings,
     Research,
     Decisions,
+    #[allow(dead_code)] // Future category for execution logs
     Execution,
 }
 

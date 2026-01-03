@@ -3,7 +3,7 @@
 //! Appends all hook events to daily JSONL files for later analysis.
 //! Format: `history/raw-events/YYYY-MM/YYYY-MM-DD.jsonl`
 
-#![allow(dead_code)]
+#![allow(dead_code)] // Capture methods - used by observability, some pending CLI commands
 
 use chrono::{DateTime, Local, Utc};
 use eyre::{Context, Result};
@@ -33,7 +33,6 @@ pub struct CapturedEvent {
     pub duration_ms: Option<u64>,
 }
 
-#[allow(dead_code)]
 impl CapturedEvent {
     /// Create a new captured event
     pub fn new(event: HookEvent, payload: serde_json::Value) -> Self {
@@ -216,7 +215,6 @@ pub struct EventStats {
 }
 
 /// Initialize the history directory structure
-#[allow(dead_code)]
 pub fn init_history_dirs(history_path: &Path) -> Result<()> {
     let dirs = [
         "raw-events",

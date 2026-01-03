@@ -3,6 +3,8 @@
 //! Agents are composed by combining: expertise + personality + approach
 //! Each trait contributes to the agent's prompt prefix.
 
+#![allow(dead_code)] // Trait enums - deserialized from YAML, prompt generation pending
+
 use serde::{Deserialize, Serialize};
 
 /// All trait types unified
@@ -155,7 +157,6 @@ pub enum TraitCategory {
 }
 
 /// Expertise traits - domain knowledge
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Expertise {
@@ -172,7 +173,6 @@ pub enum Expertise {
 }
 
 /// Personality traits - thinking style
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Personality {
@@ -188,7 +188,6 @@ pub enum Personality {
 }
 
 /// Approach traits - work style
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Approach {

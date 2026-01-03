@@ -2,6 +2,8 @@
 //!
 //! Plugins that connect to external services (Jira, Slack, etc.).
 
+#![allow(dead_code)] // Contract trait - pending plugin implementation
+
 use std::collections::HashMap;
 
 /// Result from an integration action

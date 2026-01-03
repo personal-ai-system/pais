@@ -1,5 +1,7 @@
 //! Agent loading and management
 
+#![allow(dead_code)] // get/agents_dir methods - for future CLI commands
+
 use eyre::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -126,13 +128,11 @@ impl AgentLoader {
     }
 
     /// Get an agent by name
-    #[allow(dead_code)]
     pub fn get(&self, name: &str) -> Option<&Agent> {
         self.cache.get(name)
     }
 
     /// Get the agents directory
-    #[allow(dead_code)]
     pub fn agents_dir(&self) -> &Path {
         &self.agents_dir
     }

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use colored::*;
 use eyre::{Context, Result};
 use std::io::{self, Read};

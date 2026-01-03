@@ -2,8 +2,11 @@
 //!
 //! Contracts define interfaces that plugins can provide or consume.
 //! This enables loose coupling between plugins.
+//!
+//! Note: Contract validation is not yet wired into the plugin loader.
+//! These types are used for manifest parsing but full validation is pending.
 
-#![allow(dead_code)]
+#![allow(dead_code)] // Contract validation pending integration
 
 use std::collections::HashMap;
 

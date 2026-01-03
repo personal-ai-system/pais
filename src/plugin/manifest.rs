@@ -1,6 +1,6 @@
 //! Plugin manifest parsing (plugin.yaml)
 
-#![allow(dead_code)] // Methods reserved for future use
+#![allow(dead_code)] // from_str and has_hooks - used in tests, from_str for parsing
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

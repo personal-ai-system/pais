@@ -2,6 +2,8 @@
 //!
 //! Registries are sources of plugin metadata for discovery.
 
+#![allow(dead_code)] // Registry types - for future remote registry support
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
