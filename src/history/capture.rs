@@ -3,6 +3,8 @@
 //! Appends all hook events to daily JSONL files for later analysis.
 //! Format: `history/raw-events/YYYY-MM/YYYY-MM-DD.jsonl`
 
+#![allow(dead_code)]
+
 use chrono::{DateTime, Local, Utc};
 use eyre::{Context, Result};
 use serde::{Deserialize, Serialize};

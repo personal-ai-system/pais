@@ -5,6 +5,7 @@ pub mod doctor;
 pub mod history;
 pub mod hook;
 pub mod init;
+pub mod observe;
 pub mod plugin;
 pub mod registry;
 pub mod run;

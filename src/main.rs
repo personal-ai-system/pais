@@ -10,6 +10,7 @@ mod config;
 mod contract;
 mod history;
 mod hook;
+mod observability;
 mod plugin;
 mod skill;
 
@@ -56,6 +57,9 @@ fn run(cli: Cli, config: Config) -> Result<()> {
         Commands::Context { action } => commands::context::run(action, &config),
         Commands::Registry { action } => commands::registry::run(action, &config),
         Commands::Security { action } => commands::security::run(action, &config),
+        Commands::Observe { filter, last, payload } => {
+            commands::observe::run(filter.as_deref(), last, payload, &config)
+        }
         Commands::Run { plugin, action, args } => commands::run::run(&plugin, &action, &args, &config),
         Commands::Status { format } => commands::status::run(cli::OutputFormat::resolve(format), &config),
         Commands::Sync { dry_run, clean } => commands::sync::run(dry_run, clean, &config),

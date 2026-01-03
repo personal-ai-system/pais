@@ -210,12 +210,12 @@ src/cli.rs                  # SecurityAction enum
 
 **Goal:** Real-time visibility into AI operations.
 
-### 4.1 Event Streaming
+### 4.1 Event Streaming ✅
 
 **Tasks:**
-- [ ] Implement event emitter that can send to multiple sinks
-- [ ] Support sinks: file (JSONL), stdout, HTTP endpoint
-- [ ] Configure via `pais.yaml`:
+- [x] Implement event emitter that can send to multiple sinks
+- [x] Support sinks: file (JSONL), stdout, HTTP endpoint
+- [x] Configure via `pais.yaml`:
   ```yaml
   observability:
     enabled: true
@@ -225,12 +225,12 @@ src/cli.rs                  # SecurityAction enum
     http_endpoint: http://localhost:4000/events
   ```
 
-**Files to create/modify:**
+**Files created/modified:**
 ```
 src/observability/mod.rs               # New - observability module
-src/observability/emitter.rs           # New - event emitter
-src/observability/sinks.rs             # New - sink implementations
-src/config.rs                          # Modify - observability config
+src/observability/emitter.rs           # New - event emitter, Event struct, multiple sinks
+src/config.rs                          # Modified - ObservabilityConfig, ObservabilitySink
+src/commands/hook.rs                   # Modified - uses EventEmitter instead of EventCapture
 ```
 
 ### 4.2 Dashboard Server (Optional)
@@ -248,12 +248,19 @@ tools/dashboard/server.py              # Python dashboard server
 tools/dashboard/templates/index.html   # Dashboard UI
 ```
 
-### 4.3 CLI Observability Commands
+### 4.3 CLI Observability Commands ✅
 
 **Tasks:**
-- [ ] `pais observe` - live tail of events
-- [ ] `pais observe --filter PreToolUse` - filtered tail
-- [ ] `pais stats` - event statistics
+- [x] `pais observe` - live tail of events
+- [x] `pais observe --filter PreToolUse` - filtered tail
+- [ ] `pais stats` - event statistics (deferred - `pais history stats` already exists)
+
+**Files created:**
+```
+src/commands/observe.rs                # New - live event tail command
+src/cli.rs                             # Modified - Observe command
+src/main.rs                            # Modified - route Observe command
+```
 
 ---
 

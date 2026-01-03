@@ -123,6 +123,21 @@ pub enum Commands {
         action: SecurityAction,
     },
 
+    /// Live event stream (tail events in real-time)
+    Observe {
+        /// Filter by event type (e.g., PreToolUse, SessionStart)
+        #[arg(long, short = 'f')]
+        filter: Option<String>,
+
+        /// Number of recent events to show before tailing
+        #[arg(long, short = 'n', default_value = "10")]
+        last: usize,
+
+        /// Include full payload in output
+        #[arg(long)]
+        payload: bool,
+    },
+
     /// Run a plugin action directly
     Run {
         /// Plugin name

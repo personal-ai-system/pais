@@ -13,6 +13,7 @@ pub struct Config {
     pub paths: PathsConfig,
     pub registries: HashMap<String, String>,
     pub hooks: HooksConfig,
+    pub observability: ObservabilityConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -31,6 +32,31 @@ pub struct HooksConfig {
     pub history_enabled: bool,
 }
 
+/// Observability sink type
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ObservabilitySink {
+    /// Write to JSONL file (default, uses history path)
+    File,
+    /// Print to stdout
+    Stdout,
+    /// Send to HTTP endpoint
+    Http,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct ObservabilityConfig {
+    /// Enable observability
+    pub enabled: bool,
+    /// Which sinks to send events to
+    pub sinks: Vec<ObservabilitySink>,
+    /// HTTP endpoint for http sink
+    pub http_endpoint: Option<String>,
+    /// Include event payload in output (can be verbose)
+    pub include_payload: bool,
+}
+
 impl Default for Config {
     fn default() -> Self {
         let pais_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("pais");
@@ -47,6 +73,7 @@ impl Default for Config {
                 "https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.yaml".to_string(),
             )]),
             hooks: HooksConfig::default(),
+            observability: ObservabilityConfig::default(),
         }
     }
 }
@@ -69,6 +96,17 @@ impl Default for HooksConfig {
         Self {
             security_enabled: true,
             history_enabled: true,
+        }
+    }
+}
+
+impl Default for ObservabilityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            sinks: vec![ObservabilitySink::File],
+            http_endpoint: None,
+            include_payload: false,
         }
     }
 }
