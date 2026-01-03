@@ -77,6 +77,12 @@ pub enum Commands {
         action: PluginAction,
     },
 
+    /// Manage skills
+    Skill {
+        #[command(subcommand)]
+        action: SkillAction,
+    },
+
     /// Handle hook events from Claude Code
     Hook {
         #[command(subcommand)]
@@ -194,6 +200,30 @@ pub enum PluginAction {
     /// Verify plugin installation
     Verify {
         /// Plugin name
+        name: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SkillAction {
+    /// List all skills (simple and plugin-based)
+    List {
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+
+        /// Show only simple skills (no plugin.toml)
+        #[arg(long)]
+        simple: bool,
+
+        /// Show only plugin skills
+        #[arg(long)]
+        plugin: bool,
+    },
+
+    /// Show skill details
+    Info {
+        /// Skill name
         name: String,
     },
 }

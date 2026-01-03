@@ -7,4 +7,5 @@ pub mod init;
 pub mod plugin;
 pub mod registry;
 pub mod run;
+pub mod skill;
 pub mod status;

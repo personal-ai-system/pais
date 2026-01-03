@@ -6,6 +6,7 @@ version = "0.1.0"
 
 [paths]
 plugins = "~/.config/pais/plugins"
+skills = "~/.config/pais/skills"
 history = "~/.config/pais/history"
 registries = "~/.config/pais/registries"
 

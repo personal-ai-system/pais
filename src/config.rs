@@ -27,6 +27,7 @@ pub struct PaisConfig {
 #[serde(default)]
 pub struct PathsConfig {
     pub plugins: PathBuf,
+    pub skills: PathBuf,
     pub history: PathBuf,
     pub registries: PathBuf,
 }
@@ -53,6 +54,7 @@ impl Default for Config {
             pais: PaisConfig::default(),
             paths: PathsConfig {
                 plugins: pais_dir.join("plugins"),
+                skills: pais_dir.join("skills"),
                 history: pais_dir.join("history"),
                 registries: pais_dir.join("registries"),
             },
@@ -80,6 +82,7 @@ impl Default for PathsConfig {
 
         Self {
             plugins: pais_dir.join("plugins"),
+            skills: pais_dir.join("skills"),
             history: pais_dir.join("history"),
             registries: pais_dir.join("registries"),
         }
