@@ -555,7 +555,7 @@ pais plugin new datadog --type integration --language python
 
 Created:
   datadog/
-  ├── plugin.toml
+  ├── plugin.yaml
   ├── pyproject.toml
   └── src/
       └── plugin.py

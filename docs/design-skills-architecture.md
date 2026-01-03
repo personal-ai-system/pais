@@ -24,9 +24,9 @@ This document defines where each type lives, when to use each, and how they inte
 
 | Scenario | Location | Format |
 |----------|----------|--------|
-| Tool you **control** | `.pais/` in tool's repo | SKILL.md (+ plugin.toml if needed) |
+| Tool you **control** | `.pais/` in tool's repo | SKILL.md (+ plugin.yaml if needed) |
 | Tool you **don't control** | `~/.config/pais/skills/` | SKILL.md only |
-| Complex plugin with code | `~/.config/pais/plugins/` | plugin.toml + SKILL.md + code |
+| Complex plugin with code | `~/.config/pais/plugins/` | plugin.yaml + SKILL.md + code |
 
 ---
 
@@ -40,7 +40,7 @@ This directory **is a git repo** — trackable like dotfiles.
 ~/.config/pais/                    # Git repository
 ├── .git/
 ├── .gitignore
-├── pais.toml                      # Main configuration
+├── pais.yaml                      # Main configuration
 │
 ├── skills/                        # Simple skills (TRACKED)
 │   ├── terraform/
@@ -54,11 +54,11 @@ This directory **is a git repo** — trackable like dotfiles.
 │
 ├── plugins/                       # Installed plugins (GITIGNORED)
 │   ├── incident/                  # Full plugin with code
-│   │   ├── plugin.toml
+│   │   ├── plugin.yaml
 │   │   ├── SKILL.md
 │   │   └── src/
 │   └── history/
-│       ├── plugin.toml
+│       ├── plugin.yaml
 │       └── src/
 │
 ├── history/                       # Memory storage (GITIGNORED)
@@ -101,7 +101,7 @@ scottidler/aka/
 ├── README.md
 └── .pais/
     ├── SKILL.md                   # Required: teaches Claude about aka
-    └── plugin.toml                # Optional: only if hooks/code needed
+    └── plugin.yaml                # Optional: only if hooks/code needed
 ```
 
 ### External Skills Repository (e.g., `scottidler/pais-skills`)
@@ -179,7 +179,7 @@ terraform destroy   # Destroy infrastructure
 - Prefer `count` over `for_each` for simple cases
 ```
 
-### Full Plugins (plugin.toml + code)
+### Full Plugins (plugin.yaml + code)
 
 **Use when:** You need executable code, hook handlers, contracts, or integrations.
 
@@ -192,13 +192,13 @@ terraform destroy   # Destroy infrastructure
 **What you need:**
 ```
 plugin-name/
-├── plugin.toml                    # Required: manifest
+├── plugin.yaml                    # Required: manifest
 ├── SKILL.md                       # Optional: if it's also a skill
 └── src/
     └── main.py                    # Or main.rs for Rust
 ```
 
-**plugin.toml format:**
+**plugin.yaml format:**
 ```toml
 [plugin]
 name = "incident"
@@ -563,10 +563,10 @@ pais/
 ├── src/                           # Core Rust CLI
 ├── examples/
 │   ├── hello-world/               # Example Python plugin
-│   │   ├── plugin.toml
+│   │   ├── plugin.yaml
 │   │   └── SKILL.md
 │   └── hello-rust/                # Example Rust plugin
-│       ├── plugin.toml
+│       ├── plugin.yaml
 │       └── SKILL.md
 ├── registry/
 │   └── plugins.toml               # Points to examples only
@@ -584,14 +584,14 @@ pais/
 | Type | Location | Format | Use Case |
 |------|----------|--------|----------|
 | **Simple Skill** | `~/.config/pais/skills/` | SKILL.md only | Tools you don't control |
-| **Skill with Code** | `.pais/` in tool repo | SKILL.md + plugin.toml | Tools you control |
-| **Full Plugin** | Installed to `~/.config/pais/plugins/` | plugin.toml + code | Integrations, hooks |
-| **Examples** | `pais/examples/` | plugin.toml + code | Learning/reference |
+| **Skill with Code** | `.pais/` in tool repo | SKILL.md + plugin.yaml | Tools you control |
+| **Full Plugin** | Installed to `~/.config/pais/plugins/` | plugin.yaml + code | Integrations, hooks |
+| **Examples** | `pais/examples/` | plugin.yaml + code | Learning/reference |
 
 **Key insights:**
 1. Skills live with code when possible
 2. `~/.config/pais/` is a git repo (like dotfiles)
-3. Simple skills don't need plugin.toml
+3. Simple skills don't need plugin.yaml
 4. Full plugins use the contract system for complex integrations
 5. PAIS extends Claude Code, doesn't replace it
 

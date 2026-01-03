@@ -32,7 +32,7 @@ cargo install --path . --locked
 src/
 ├── main.rs          # Entry point, CLI dispatch
 ├── cli.rs           # Clap command definitions
-├── config.rs        # Configuration loading (pais.toml)
+├── config.rs        # Configuration loading (pais.yaml)
 ├── commands/        # Subcommand implementations
 │   ├── plugin.rs    # pais plugin *
 │   ├── hook.rs      # pais hook dispatch
@@ -49,15 +49,15 @@ src/
 │   └── mod.rs       # HistoryEntry, HistoryStore
 ├── plugin/
 │   ├── mod.rs       # Plugin struct
-│   ├── manifest.rs  # plugin.toml parsing
+│   ├── manifest.rs  # plugin.yaml parsing
 │   └── loader.rs    # Plugin loading
 └── contract/        # Interface definitions (future)
 ```
 
 ## Key Files
 
-- `pais.toml` — User configuration (paths, registries, hooks)
-- `plugin.toml` — Plugin manifest (in each plugin directory)
+- `pais.yaml` — User configuration (paths, registries, hooks)
+- `plugin.yaml` — Plugin manifest (in each plugin directory)
 - `.claude/settings.json` — Claude Code hook registration
 
 ## Coding Conventions
@@ -71,7 +71,7 @@ src/
 ## Plugin System
 
 Plugins live in `~/.config/pais/plugins/<name>/` with:
-- `plugin.toml` — Manifest (name, version, language, hooks)
+- `plugin.yaml` — Manifest (name, version, language, hooks)
 - `src/main.py` or `src/main.rs` — Entry point
 - `SKILL.md` — Optional skill definition
 
@@ -106,7 +106,7 @@ Categories: `sessions`, `events`, `learnings`, `decisions`
 | **JSON** | API responses, hook payloads | Required by external systems |
 
 - History entries use **Markdown with YAML frontmatter**
-- Config files use **TOML** (pais.toml, plugin.toml)
+- Config files use **YAML** (pais.yaml, plugin.yaml)
 - Hook payloads are **JSON** (Claude Code's protocol)
 - Plugin CLI output is **JSON** (for programmatic parsing)
 

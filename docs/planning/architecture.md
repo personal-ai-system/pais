@@ -61,24 +61,24 @@ PAIS is a **plugin layer** on top of Claude Code's native primitives. It does no
 
 ```
 ~/.config/pais/                      # PAIS_DIR (configurable)
-├── pais.toml                        # Global configuration
+├── pais.yaml                        # Global configuration
 ├── .env                             # Secrets (API keys)
 ├── plugins/                         # Installed plugins
 │   ├── hooks/                       # Foundation: hook handling
-│   │   ├── plugin.toml              # Plugin manifest
+│   │   ├── plugin.yaml              # Plugin manifest
 │   │   ├── Cargo.toml               # Rust project
 │   │   └── src/
 │   │       └── lib.rs
 │   ├── history/                     # Foundation: memory system
-│   │   ├── plugin.toml
+│   │   ├── plugin.yaml
 │   │   ├── pyproject.toml           # Python project
 │   │   └── src/
 │   │       └── plugin.py
 │   ├── jira/                        # Integration: Atlassian
-│   │   ├── plugin.toml
+│   │   ├── plugin.yaml
 │   │   └── src/
 │   └── incident/                    # Skill: incident response
-│       ├── plugin.toml
+│       ├── plugin.yaml
 │       ├── SKILL.md                 # Claude Code skill
 │       └── src/
 ├── history/                         # Memory storage
@@ -142,7 +142,7 @@ PAIS plugins can provide Claude Code skills by including `SKILL.md` files:
 
 ```
 plugins/incident/
-├── plugin.toml
+├── plugin.yaml
 ├── SKILL.md              # ← Claude Code discovers this
 └── workflows/
     ├── declare.md
@@ -157,7 +157,7 @@ Plugins can define subagents for isolated, specialized tasks:
 
 ```
 plugins/incident/
-├── plugin.toml
+├── plugin.yaml
 ├── agents/               # ← Claude Code discovers these
 │   └── incident-coordinator/
 │       └── AGENT.md
@@ -170,7 +170,7 @@ Plugins can bundle MCP servers for external integrations:
 
 ```
 plugins/jira/
-├── plugin.toml
+├── plugin.yaml
 ├── .mcp.json             # ← MCP server configuration
 └── src/
     └── server.py         # ← MCP server implementation
@@ -180,7 +180,7 @@ plugins/jira/
 
 ## Plugin System
 
-### Plugin Manifest (`plugin.toml`)
+### Plugin Manifest (`plugin.yaml`)
 
 Every plugin has a manifest declaring its identity and contracts:
 
@@ -256,7 +256,7 @@ Plugins communicate through **contracts**, not direct dependencies:
 
 ```
 1. PAIS CLI starts
-2. Scan ~/.config/pais/plugins/ for plugin.toml files
+2. Scan ~/.config/pais/plugins/ for plugin.yaml files
 3. Parse all manifests (no code loaded yet)
 4. Build dependency graph from provides/consumes
 5. Check for missing required contracts (fail if any)
@@ -421,7 +421,7 @@ regex = "1"
 
 ## Configuration
 
-### Global Configuration (`pais.toml`)
+### Global Configuration (`pais.yaml`)
 
 ```toml
 [pais]

@@ -40,7 +40,7 @@ impl OutputFormat {
 )]
 pub struct Cli {
     /// Path to config file
-    #[arg(short, long, global = true, help = "Path to pais.toml config file")]
+    #[arg(short, long, global = true, help = "Path to pais.yaml config file")]
     pub config: Option<PathBuf>,
 
     /// Enable verbose output

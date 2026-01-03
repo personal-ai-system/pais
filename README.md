@@ -98,7 +98,7 @@ pais plugin install --dev ./my-skill
 
 ```
 my-plugin/
-├── plugin.toml      # Plugin manifest
+├── plugin.yaml      # Plugin manifest
 ├── SKILL.md         # Skill documentation (for skill plugins)
 ├── README.md        # Plugin README
 ├── pyproject.toml   # Python dependencies (or Cargo.toml for Rust)
@@ -106,7 +106,7 @@ my-plugin/
     └── main.py      # Entry point (or main.rs for Rust)
 ```
 
-### plugin.toml
+### plugin.yaml
 
 ```toml
 [plugin]
@@ -128,11 +128,11 @@ type = "uv"
 PAIS looks for configuration in this order:
 1. `--config` flag
 2. `$PAIS_CONFIG` environment variable
-3. `$PAIS_DIR/pais.toml`
-4. `~/.config/pais/pais.toml`
-5. `./pais.toml` (for development)
+3. `$PAIS_DIR/pais.yaml`
+4. `~/.config/pais/pais.yaml`
+5. `./pais.yaml` (for development)
 
-### Example pais.toml
+### Example pais.yaml
 
 ```toml
 [pais]

@@ -18,7 +18,7 @@ pais [OPTIONS] <COMMAND>
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--config <PATH>` | `-c` | Path to pais.toml (default: `~/.config/pais/pais.toml`) |
+| `--config <PATH>` | `-c` | Path to pais.yaml (default: `~/.config/pais/pais.yaml`) |
 | `--verbose` | `-v` | Increase log verbosity (can be repeated: -vv, -vvv) |
 | `--quiet` | `-q` | Suppress non-error output |
 | `--help` | `-h` | Print help |
@@ -201,7 +201,7 @@ Creates:
 
 ```
 oncall/
-├── plugin.toml
+├── plugin.yaml
 ├── pyproject.toml
 ├── SKILL.md
 ├── src/
@@ -485,7 +485,7 @@ Options:
 PAIS Status
 
   Version:    0.1.0
-  Config:     ~/.config/pais/pais.toml
+  Config:     ~/.config/pais/pais.yaml
   Plugins:    ~/.config/pais/plugins/
   History:    ~/.config/pais/history/
 
@@ -516,7 +516,7 @@ History:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PAIS_DIR` | Base directory for PAIS | `~/.config/pais` |
-| `PAIS_CONFIG` | Path to pais.toml | `$PAIS_DIR/pais.toml` |
+| `PAIS_CONFIG` | Path to pais.yaml | `$PAIS_DIR/pais.yaml` |
 | `PAIS_LOG_LEVEL` | Log level (trace, debug, info, warn, error) | `info` |
 | `PAIS_NO_COLOR` | Disable colored output | unset |
 
@@ -537,7 +537,7 @@ History:
 
 ---
 
-## Configuration File (`pais.toml`)
+## Configuration File (`pais.yaml`)
 
 ```toml
 [pais]

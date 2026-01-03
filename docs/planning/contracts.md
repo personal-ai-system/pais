@@ -335,7 +335,7 @@ class NotificationProvider(Protocol):
 
 ## Plugin Manifest Schema
 
-The `plugin.toml` manifest declares contracts:
+The `plugin.yaml` manifest declares contracts:
 
 ```toml
 [plugin]
@@ -388,7 +388,7 @@ def load_plugins(plugin_dir: Path) -> dict[str, Plugin]:
     # Phase 1: Load all manifests
     manifests = {}
     for plugin_path in plugin_dir.iterdir():
-        if (plugin_path / "plugin.toml").exists():
+        if (plugin_path / "plugin.yaml").exists():
             manifests[plugin_path.name] = load_manifest(plugin_path)
 
     # Phase 2: Build provider map

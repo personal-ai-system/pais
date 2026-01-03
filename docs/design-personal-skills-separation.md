@@ -179,7 +179,7 @@ pais plugin install mycompany-oncall
    - Create `pais-skills/registry/plugins.toml` with moved skills
 
 4. **Update default config**
-   - Remove `scottidler-skills` from default `pais.toml`
+   - Remove `scottidler-skills` from default `pais.yaml`
    - Document how to add personal registries
 
 5. **Update CLAUDE.md**

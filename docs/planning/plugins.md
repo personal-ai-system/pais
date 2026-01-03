@@ -17,7 +17,7 @@ This creates:
 
 ```
 my-skill/
-├── plugin.toml           # Plugin manifest
+├── plugin.yaml           # Plugin manifest
 ├── pyproject.toml        # Python dependencies
 ├── SKILL.md              # Claude Code skill definition
 ├── src/
@@ -30,7 +30,7 @@ my-skill/
 
 ### 2. Define Your Plugin
 
-Edit `plugin.toml`:
+Edit `plugin.yaml`:
 
 ```toml
 [plugin]
@@ -183,7 +183,7 @@ Teach Claude workflows.
 
 ```
 my-plugin/
-├── plugin.toml      # Required: manifest
+├── plugin.yaml      # Required: manifest
 └── src/
     └── plugin.py    # Required: implementation
 ```
@@ -192,7 +192,7 @@ my-plugin/
 
 ```
 my-plugin/
-├── plugin.toml           # Plugin manifest
+├── plugin.yaml           # Plugin manifest
 ├── pyproject.toml        # Python dependencies
 ├── Cargo.toml            # Rust dependencies (if Rust)
 ├── SKILL.md              # Claude Code skill (if skill plugin)
@@ -216,7 +216,7 @@ my-plugin/
 
 ---
 
-## Plugin Manifest (`plugin.toml`)
+## Plugin Manifest (`plugin.yaml`)
 
 ### Required Fields
 
@@ -476,7 +476,7 @@ class JiraPlugin(Plugin):
 
 ```
 my-rust-plugin/
-├── plugin.toml
+├── plugin.yaml
 ├── Cargo.toml
 └── src/
     └── lib.rs

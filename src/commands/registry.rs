@@ -70,7 +70,7 @@ fn list(config: &Config) -> Result<()> {
 
     for (name, url) in &config.registries {
         // Check if we have a cached listing
-        let cache_file = registries_dir.join(format!("{}.toml", name));
+        let cache_file = registries_dir.join(format!("{}.yaml", name));
         let status = if cache_file.exists() {
             "✓".green().to_string()
         } else {

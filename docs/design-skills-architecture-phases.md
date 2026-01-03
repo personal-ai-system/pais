@@ -26,7 +26,7 @@ This document breaks the skills architecture into implementable phases. Each pha
 
 ## Phase 1: Simple Skills Support ✅
 
-**Goal:** Support SKILL.md-only skills (no plugin.toml required)
+**Goal:** Support SKILL.md-only skills (no plugin.yaml required)
 
 **Status:** Complete (2026-01-02)
 
@@ -464,7 +464,7 @@ pais init
   ✓ Created history/
   ✓ Created registries/
   ✓ Created history subdirectories
-  ✓ Created pais.toml
+  ✓ Created pais.yaml
   ✓ Created .gitignore
   ✓ Initialized git repository
   ✓ Created initial commit
@@ -548,7 +548,7 @@ If distributing skills with tool repos becomes desirable later, `pais skill scan
 
 | Phase | Goal | Key Deliverable | Effort |
 |-------|------|-----------------|--------|
-| **1** | Simple skills support | Skills without plugin.toml | Medium |
+| **1** | Simple skills support | Skills without plugin.yaml | Medium |
 | **2** | Skill commands | `pais skill add/list/edit` | Medium |
 | **3** | Sync to Claude | `pais sync` | Small |
 | **4** | Skill scanning | `pais skill scan` | Medium |
@@ -576,7 +576,7 @@ Phase 1 ──► Phase 2 ──► Phase 3 ──► Phase 5 ──► Phase 6
 
 ## What Doesn't Change
 
-- ✅ Plugin infrastructure (plugin.toml, contracts, hooks)
+- ✅ Plugin infrastructure (plugin.yaml, contracts, hooks)
 - ✅ Registry system
 - ✅ Hook dispatch
 - ✅ `pais plugin` commands

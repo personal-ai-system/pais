@@ -25,7 +25,7 @@ pub fn run(config: &Config) -> Result<()> {
     }
 
     // Check config file
-    let config_file = pais_dir.join("pais.toml");
+    let config_file = pais_dir.join("pais.yaml");
     if config_file.exists() {
         println!("{} Config file: {}", "✓".green(), config_file.display());
     } else {
@@ -81,7 +81,7 @@ pub fn run(config: &Config) -> Result<()> {
         println!("  {} No registries configured", "⚠".yellow());
     } else {
         for (name, url) in &config.registries {
-            let cache_file = registries_dir.join(format!("{}.toml", name));
+            let cache_file = registries_dir.join(format!("{}.yaml", name));
             if cache_file.exists() {
                 println!("  {} {} (cached)", "✓".green(), name);
             } else {
