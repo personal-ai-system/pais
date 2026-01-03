@@ -2,6 +2,14 @@
 //!
 //! Stores session data, learnings, decisions, and insights as markdown files.
 //! Structure: ~/.config/pais/history/<category>/<date>/<id>.md
+//!
+//! ## Event Capture
+//!
+//! Raw hook events are captured to JSONL files for analysis:
+//! `history/raw-events/YYYY-MM/YYYY-MM-DD.jsonl`
+
+pub mod capture;
+pub mod categorize;
 
 use chrono::{DateTime, Local, NaiveDate};
 use eyre::{Context, Result};

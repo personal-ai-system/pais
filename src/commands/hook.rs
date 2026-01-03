@@ -6,6 +6,7 @@ use std::io::{self, Read};
 
 use crate::cli::HookAction;
 use crate::config::Config;
+use crate::history::capture::EventCapture;
 use crate::hook::history::HistoryHandler;
 use crate::hook::security::SecurityValidator;
 use crate::hook::{HookEvent, HookHandler, HookResult};
@@ -45,10 +46,16 @@ fn dispatch(event: &str, payload: Option<&str>, config: &Config) -> Result<()> {
     log::info!("Dispatching hook event: {:?}", hook_event);
     log::debug!("Payload: {}", payload);
 
+    // Capture raw event to JSONL log
+    let history_path = Config::expand_path(&config.paths.history);
+    let event_capture = EventCapture::new(history_path.clone(), config.hooks.history_enabled);
+    if let Err(e) = event_capture.capture(hook_event, &payload) {
+        log::warn!("Failed to capture event: {}", e);
+    }
+
     // Build handlers list
     let security_enabled = config.hooks.security_enabled;
     let history_enabled = config.hooks.history_enabled;
-    let history_path = Config::expand_path(&config.paths.history);
 
     let handlers: Vec<Box<dyn HookHandler>> = vec![
         Box::new(SecurityValidator::new(security_enabled)),

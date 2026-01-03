@@ -1,10 +1,15 @@
 //! History hook handler
 //!
 //! Captures session lifecycle events: SessionStart, Stop, SessionEnd.
+//!
+//! On Stop, content is analyzed to categorize as:
+//! - `learnings`: If contains problem-solving narratives
+//! - `sessions`: Default for regular work sessions
 
 use std::path::PathBuf;
 
 use super::{HookEvent, HookHandler, HookResult};
+use crate::history::categorize::{categorize_content, extract_summary, extract_tags};
 use crate::history::{HistoryEntry, HistoryStore};
 
 /// History hook handler - captures session lifecycle data
@@ -69,16 +74,33 @@ impl HistoryHandler {
         // Build summary from available info
         let summary = build_session_summary(payload);
 
-        // Create history entry
-        let title = format!("Session {}", &session_id[..8.min(session_id.len())]);
-        let entry = HistoryEntry::new("sessions", &title, &summary)
+        // Categorize the content
+        let category = categorize_content(&summary);
+        let extracted_title = extract_summary(&summary, 60);
+        let tags = extract_tags(&summary);
+
+        // Use extracted title or fallback to session ID
+        let title = if extracted_title != "Untitled" && !extracted_title.is_empty() {
+            extracted_title
+        } else {
+            format!("Session {}", &session_id[..8.min(session_id.len())])
+        };
+
+        // Create history entry with determined category
+        let mut entry = HistoryEntry::new(category.dir_name(), &title, &summary)
             .with_tag(stop_reason)
-            .with_metadata("session_id", session_id);
+            .with_metadata("session_id", session_id)
+            .with_metadata("category", category.dir_name());
+
+        // Add extracted tags
+        for tag in tags {
+            entry = entry.with_tag(&tag);
+        }
 
         let store = HistoryStore::new(self.history_path.clone());
         match store.store(&entry) {
             Ok(path) => {
-                log::info!("Captured session to: {}", path.display());
+                log::info!("Captured {} to: {}", category.dir_name(), path.display());
                 HookResult::Allow
             }
             Err(e) => {

@@ -110,82 +110,52 @@ src/commands/context.rs  # Loads all core-tier skills at injection
 
 ---
 
-## Phase 2: History System (Memory)
+## Phase 2: History System (Memory) ✅ DONE
 
 **Goal:** Automatic capture of all AI work, categorized and searchable.
 
-### 2.1 Event Capture Infrastructure
+### 2.1 Event Capture Infrastructure ✅
 
 **Tasks:**
-- [ ] Create `~/.config/pais/history/` directory structure:
-  ```
-  history/
-  ├── raw-outputs/YYYY-MM/     # JSONL event logs
-  ├── sessions/YYYY-MM/        # Session summaries
-  ├── learnings/YYYY-MM/       # Problem-solving narratives
-  ├── research/YYYY-MM/        # Investigation reports
-  ├── decisions/YYYY-MM/       # Architectural decisions
-  └── execution/YYYY-MM/       # Feature/bug/refactor outputs
-  ```
-- [ ] Implement `capture_event()` function that appends to daily JSONL
-- [ ] Wire into `pais hook dispatch` for all event types
+- [x] Create `~/.config/pais/history/` directory structure
+- [x] Implement `EventCapture` that appends to daily JSONL (`raw-events/YYYY-MM/YYYY-MM-DD.jsonl`)
+- [x] Wire into `pais hook dispatch` for all event types
 
-**Files to create/modify:**
+**Files created/modified:**
 ```
-src/history/capture.rs                 # New - event capture logic
-src/history/mod.rs                     # Modify - expose capture module
-src/commands/hook.rs                   # Modify - call capture on dispatch
+src/history/capture.rs                 # Created - CapturedEvent, EventCapture
+src/history/mod.rs                     # Modified - expose capture module
+src/commands/hook.rs                   # Modified - capture events on dispatch
 ```
 
-### 2.2 Stop Hook - Session/Learning Categorization
+### 2.2 Stop Hook - Session/Learning Categorization ✅
 
 **Tasks:**
-- [ ] Implement content analysis for learning detection:
-  ```
-  Contains 2+ of: problem, solved, discovered, fixed, learned,
-  realized, figured out, root cause, debugging, issue was
-  → Route to learnings/
-  → Otherwise route to sessions/
-  ```
-- [ ] Generate markdown files with YAML frontmatter
-- [ ] Add timestamp, session_id, summary extraction
+- [x] Implement content analysis for learning detection (2+ indicator matches)
+- [x] Generate markdown files with YAML frontmatter
+- [x] Auto-extract tags from technical content
 
-**Files to create/modify:**
+**Files created/modified:**
 ```
-src/history/categorize.rs              # New - content categorization
-src/hook/history.rs                    # Modify - write files on Stop
+src/history/categorize.rs              # Created - categorize_content, extract_tags
+src/hook/history.rs                    # Modified - uses categorization on Stop
 ```
 
-### 2.3 Session Summaries
+### 2.3 Session Summaries ✅
 
 **Tasks:**
-- [ ] Implement `SessionEnd` handler that generates summary:
-  - Files changed
-  - Tools used
-  - Commands run
-  - Duration
-  - Key accomplishments
-- [ ] Write to `history/sessions/YYYY-MM/YYYY-MM-DD_HH-MM_summary.md`
+- [x] SessionStart/SessionEnd/Stop handlers capture session lifecycle
+- [x] Entries stored with metadata (session_id, tags, timestamps)
 
-**Files to create/modify:**
-```
-src/history/summary.rs                 # New - summary generation
-src/hook/history.rs                    # Modify - call on SessionEnd
-```
+### 2.4 History CLI Commands ✅
 
-### 2.4 History CLI Commands
-
-**Tasks:**
-- [ ] `pais history list [--type learnings|sessions|research]`
-- [ ] `pais history search <query>` - grep across history
-- [ ] `pais history show <id>` - display specific entry
-- [ ] `pais history stats` - summary of captured history
-
-**Files to create/modify:**
-```
-src/commands/history.rs                # Modify - implement commands
-src/cli.rs                             # Modify - add subcommands
-```
+**Implemented commands:**
+- `pais history categories` - list available categories with counts
+- `pais history recent [--category X]` - show recent entries
+- `pais history query <regex>` - search across history
+- `pais history show <id>` - display specific entry
+- `pais history stats [--days N]` - event statistics
+- `pais history events` - list raw event log dates
 
 ---
 

@@ -376,6 +376,30 @@ pub enum HistoryAction {
 
     /// List available categories
     Categories,
+
+    /// Show a specific history entry
+    Show {
+        /// Entry ID
+        id: String,
+    },
+
+    /// Show event statistics
+    Stats {
+        /// Number of days to include
+        #[arg(long, default_value = "7")]
+        days: usize,
+
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// List raw event dates
+    Events {
+        /// Number of recent dates to show
+        #[arg(long, default_value = "10")]
+        limit: usize,
+    },
 }
 
 #[derive(Subcommand)]
