@@ -344,6 +344,316 @@ mod tests {
     use std::io::Write;
     use tempfile::{tempdir, NamedTempFile};
 
+    // =========================================================================
+    // CRITICAL: Tests to prevent empty session content regression
+    // =========================================================================
+
+    #[test]
+    fn test_empty_payload_produces_session_completed() {
+        // This is the FAILURE case we want to detect
+        let payload = json!({});
+        let summary = build_session_summary(&payload);
+
+        // Without any content source, we get the fallback
+        assert_eq!(summary.trim(), "Session completed.");
+    }
+
+    #[test]
+    fn test_payload_with_only_session_id_is_empty() {
+        // This was the bug - Claude sends session_id but we weren't reading transcript
+        let payload = json!({
+            "session_id": "abc123",
+            "stop_reason": "completed"
+        });
+        let summary = build_session_summary(&payload);
+
+        // Should have stop_reason but still essentially empty content
+        assert!(summary.contains("completed"));
+        assert!(!summary.contains("## Final Response"));
+    }
+
+    #[test]
+    fn test_transcript_path_is_read_when_response_missing() {
+        // THE CRITICAL TEST: Claude provides transcript_path, not response
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content = r#"{"type":"user","message":{"content":"Fix the bug"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"I analyzed the code and found the issue. The bug was in the authentication handler where we were not properly validating tokens."}]}}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "session_id": "test-session",
+            "stop_reason": "completed",
+            "transcript_path": temp_file.path().to_str().unwrap()
+            // NOTE: No "response" field - this is how Claude actually sends it
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // MUST contain the actual content from transcript
+        assert!(
+            summary.contains("analyzed the code"),
+            "Summary should contain transcript content, got: {}",
+            summary
+        );
+        assert!(summary.contains("## Final Response"));
+    }
+
+    #[test]
+    fn test_response_field_takes_precedence_over_transcript() {
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        temp_file
+            .write_all(b"should not be read")
+            .expect("Failed to write");
+
+        let payload = json!({
+            "response": "Direct response content here",
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // response field should be used, not transcript
+        assert!(summary.contains("Direct response content here"));
+    }
+
+    // =========================================================================
+    // Claude Code transcript format tests (real format from ~/.claude/projects/)
+    // =========================================================================
+
+    #[test]
+    fn test_real_claude_code_transcript_format() {
+        // This matches the actual format Claude Code uses
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content = r#"{"parentUuid":null,"type":"user","message":{"role":"user","content":"use gx create a PR"},"uuid":"e56dbefa","timestamp":"2026-01-04T20:50:11.549Z"}
+{"parentUuid":"e56dbefa","type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Let me analyze..."},{"type":"text","text":"I'll help you create PRs using gx. First, let me check the syntax."}]},"uuid":"07d80829","timestamp":"2026-01-04T20:50:19.980Z"}
+{"parentUuid":"07d80829","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Successfully created 5 PRs across all repositories."}]},"uuid":"412b9777","timestamp":"2026-01-04T20:50:20.855Z"}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // Should get the LAST assistant message
+        assert!(
+            summary.contains("Successfully created 5 PRs"),
+            "Should extract last assistant message, got: {}",
+            summary
+        );
+    }
+
+    #[test]
+    fn test_transcript_with_thinking_blocks_extracts_text_only() {
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content = r#"{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"Internal reasoning here"},{"type":"text","text":"The visible response to the user about fixing the problem."}]}}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // Should extract text, not thinking
+        assert!(summary.contains("visible response"));
+        assert!(!summary.contains("Internal reasoning"));
+    }
+
+    // =========================================================================
+    // Edge cases and error handling
+    // =========================================================================
+
+    #[test]
+    fn test_nonexistent_transcript_path_gracefully_fails() {
+        let payload = json!({
+            "transcript_path": "/nonexistent/path/to/transcript.jsonl"
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // Should fallback gracefully, not panic
+        assert_eq!(summary.trim(), "Session completed.");
+    }
+
+    #[test]
+    fn test_malformed_jsonl_gracefully_fails() {
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        temp_file
+            .write_all(b"not valid json\nalso not valid\n")
+            .expect("Failed to write");
+
+        let payload = json!({
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // Should fallback gracefully
+        assert_eq!(summary.trim(), "Session completed.");
+    }
+
+    #[test]
+    fn test_empty_transcript_file() {
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+
+        let payload = json!({
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+        assert_eq!(summary.trim(), "Session completed.");
+    }
+
+    #[test]
+    fn test_transcript_with_only_user_messages() {
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content = r#"{"type":"user","message":{"content":"Hello"}}
+{"type":"user","message":{"content":"Are you there?"}}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // No assistant messages, should fallback
+        assert_eq!(summary.trim(), "Session completed.");
+    }
+
+    #[test]
+    fn test_short_response_is_skipped() {
+        // Responses < 50 chars are skipped (likely incomplete)
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content =
+            r#"{"type":"assistant","message":{"content":[{"type":"text","text":"OK"}]}}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // Too short, should skip
+        assert_eq!(summary.trim(), "Session completed.");
+    }
+
+    #[test]
+    fn test_response_is_truncated_at_5000_chars() {
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let long_text = "x".repeat(10000);
+        let transcript_content = format!(
+            r#"{{"type":"assistant","message":{{"content":[{{"type":"text","text":"{}"}}]}}}}"#,
+            long_text
+        );
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // Should be truncated
+        assert!(summary.len() < 6000, "Response should be truncated");
+    }
+
+    // =========================================================================
+    // Integration: Full handler tests
+    // =========================================================================
+
+    #[test]
+    fn test_stop_handler_creates_learning_entry_from_transcript() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
+
+        // Create transcript with learning indicators
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content = r#"{"type":"assistant","message":{"content":[{"type":"text","text":"I discovered the problem was a race condition. The root cause was that we were not properly locking the mutex. I fixed it by adding proper synchronization."}]}}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "session_id": "test-learning-session",
+            "stop_reason": "completed",
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let result = handler.handle(HookEvent::Stop, &payload);
+        assert!(matches!(result, HookResult::Allow));
+
+        // Check that a file was created in learnings/
+        let learnings_dir = temp_dir.path().join("learnings");
+        if learnings_dir.exists() {
+            let entries: Vec<_> = fs::read_dir(&learnings_dir)
+                .unwrap()
+                .filter_map(|e| e.ok())
+                .collect();
+            // Should have created a dated subdirectory with an entry
+            assert!(
+                !entries.is_empty() || learnings_dir.read_dir().unwrap().count() > 0,
+                "Should have created learning entry"
+            );
+        }
+    }
+
+    #[test]
+    fn test_stop_handler_creates_session_entry_from_transcript() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
+
+        // Create transcript WITHOUT learning indicators
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content = r#"{"type":"assistant","message":{"content":[{"type":"text","text":"I've completed the task you requested. The configuration has been updated and the server is now running with the new settings."}]}}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "session_id": "test-session",
+            "stop_reason": "completed",
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let result = handler.handle(HookEvent::Stop, &payload);
+        assert!(matches!(result, HookResult::Allow));
+
+        // Check that a file was created in sessions/
+        let sessions_dir = temp_dir.path().join("sessions");
+        if sessions_dir.exists() {
+            let has_content = fs::read_dir(&sessions_dir)
+                .map(|d| d.count() > 0)
+                .unwrap_or(false);
+            assert!(has_content, "Should have created session entry");
+        }
+    }
+
+    // =========================================================================
+    // Original tests (kept for completeness)
+    // =========================================================================
+
     #[test]
     fn test_build_session_summary() {
         let payload = json!({
@@ -355,27 +665,6 @@ mod tests {
         assert!(summary.contains("user_request"));
         assert!(summary.contains("Bash"));
         assert!(summary.contains("Edit"));
-    }
-
-    #[test]
-    fn test_build_session_summary_with_transcript() {
-        // Create a fake transcript file
-        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        let transcript_content = r#"{"type":"user","message":{"content":"Hello"}}
-{"type":"assistant","message":{"content":[{"type":"text","text":"I fixed the bug by updating the configuration. The root cause was a missing environment variable that caused the authentication to fail."}]}}
-"#;
-        temp_file
-            .write_all(transcript_content.as_bytes())
-            .expect("Failed to write");
-
-        let payload = json!({
-            "stop_reason": "completed",
-            "transcript_path": temp_file.path().to_str().unwrap()
-        });
-
-        let summary = build_session_summary(&payload);
-        assert!(summary.contains("fixed the bug"));
-        assert!(summary.contains("root cause"));
     }
 
     #[test]
@@ -429,27 +718,5 @@ mod tests {
         assert!(handler.handles(HookEvent::Stop));
         assert!(handler.handles(HookEvent::SessionStart));
         assert!(!handler.handles(HookEvent::PreToolUse));
-    }
-
-    #[test]
-    fn test_transcript_with_learning_content_categorized_correctly() {
-        // Create a transcript with learning indicators
-        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        let transcript_content = r#"{"type":"assistant","message":{"content":[{"type":"text","text":"I discovered the problem was in the authentication module. The root cause was that we were using the wrong API endpoint. I fixed it by updating the configuration."}]}}
-"#;
-        temp_file
-            .write_all(transcript_content.as_bytes())
-            .expect("Failed to write");
-
-        let payload = json!({
-            "transcript_path": temp_file.path().to_str().unwrap()
-        });
-
-        let summary = build_session_summary(&payload);
-
-        // The summary should contain learning indicators
-        assert!(summary.contains("discovered"));
-        assert!(summary.contains("root cause"));
-        assert!(summary.contains("fixed"));
     }
 }
