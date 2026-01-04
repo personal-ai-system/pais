@@ -27,8 +27,7 @@ pub fn run(dry_run: bool, clean: bool, config: &Config) -> Result<()> {
 
 /// Get the Claude Code skills directory
 fn get_claude_skills_dir() -> Result<PathBuf> {
-    let home = dirs::home_dir().ok_or_else(|| eyre::eyre!("Could not determine home directory"))?;
-    Ok(home.join(".claude").join("skills"))
+    Config::claude_skills_dir().ok_or_else(|| eyre::eyre!("Could not determine home directory"))
 }
 
 /// Sync all PAIS skills to Claude Code

@@ -26,10 +26,7 @@ registries/
 
 /// Set up Claude Code integration by ensuring ~/.claude/skills/ exists
 fn setup_claude_hooks(pais_dir: &Path) -> Result<()> {
-    let claude_skills = dirs::home_dir()
-        .ok_or_else(|| eyre::eyre!("Could not determine home directory"))?
-        .join(".claude")
-        .join("skills");
+    let claude_skills = Config::claude_skills_dir().ok_or_else(|| eyre::eyre!("Could not determine home directory"))?;
 
     if !claude_skills.exists() {
         fs::create_dir_all(&claude_skills).context("Failed to create ~/.claude/skills")?;

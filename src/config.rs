@@ -250,6 +250,19 @@ impl Config {
         let expanded = shellexpand::full(&path_str).unwrap_or_else(|_| path_str.clone());
         PathBuf::from(expanded.as_ref())
     }
+
+    /// Claude Code settings path (for display)
+    pub const CLAUDE_SETTINGS_JSON: &'static str = "~/.claude/settings.json";
+
+    /// Get the Claude Code skills directory (~/.claude/skills)
+    pub fn claude_skills_dir() -> Option<PathBuf> {
+        dirs::home_dir().map(|h| h.join(".claude/skills"))
+    }
+
+    /// Get the Claude Code settings file
+    pub fn claude_settings_file() -> Option<PathBuf> {
+        dirs::home_dir().map(|h| h.join(".claude/settings.json"))
+    }
 }
 
 #[cfg(test)]

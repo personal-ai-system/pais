@@ -173,14 +173,23 @@ pub fn run(config: &Config) -> Result<()> {
         }
     );
 
-    // Check Claude Code hooks file
-    let claude_hooks = std::env::current_dir().ok().map(|d| d.join(".claude/settings.json"));
-    if let Some(hooks_file) = claude_hooks {
+    // Check Claude Code hooks file (global settings)
+    if let Some(hooks_file) = Config::claude_settings_file() {
         if hooks_file.exists() {
-            println!("  {} Claude Code hooks configured", "✓".green());
+            // Check if hooks are actually configured in the file
+            if let Ok(content) = fs::read_to_string(&hooks_file) {
+                if content.contains("hooks") && content.contains("pais") {
+                    println!("  {} Claude Code hooks configured", "✓".green());
+                } else {
+                    println!("  {} Claude Code settings exists but no PAIS hooks", "⚠".yellow());
+                    println!("    Add hooks configuration to {}", Config::CLAUDE_SETTINGS_JSON.cyan());
+                }
+            } else {
+                println!("  {} Claude Code hooks configured", "✓".green());
+            }
         } else {
             println!("  {} Claude Code hooks not configured", "⚠".yellow());
-            println!("    Create {} to enable hooks", ".claude/settings.json".cyan());
+            println!("    Create {} to enable hooks", Config::CLAUDE_SETTINGS_JSON.cyan());
         }
     }
 
