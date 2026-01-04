@@ -30,7 +30,6 @@ struct Status {
     hooks: HookStatus,
     observability: ObservabilityStatus,
     history: HistoryStatus,
-    registries: Vec<RegistryStatus>,
 }
 
 #[derive(Serialize)]
@@ -80,20 +79,12 @@ struct CategoryStats {
     latest: Option<String>,
 }
 
-#[derive(Serialize)]
-struct RegistryStatus {
-    name: String,
-    url: String,
-    cached: bool,
-}
-
 pub fn run(format: OutputFormat, config: &Config) -> Result<()> {
     let pais_dir = Config::pais_dir();
     let plugins_dir = Config::expand_path(&config.paths.plugins);
     let skills_dir = Config::expand_path(&config.paths.skills);
     let agents_dir = pais_dir.join("agents"); // Not in PathsConfig, hardcoded to standard location
     let history_dir = Config::expand_path(&config.paths.history);
-    let registries_dir = Config::expand_path(&config.paths.registries);
 
     // Gather plugin info
     let mut plugin_manager = PluginManager::new(plugins_dir.clone());
@@ -167,20 +158,6 @@ pub fn run(format: OutputFormat, config: &Config) -> Result<()> {
     // History stats
     let history = gather_history_stats(&history_dir);
 
-    // Registry status
-    let registries: Vec<RegistryStatus> = config
-        .registries
-        .iter()
-        .map(|(name, url)| {
-            let cache_file = registries_dir.join(format!("{}.yaml", name));
-            RegistryStatus {
-                name: name.clone(),
-                url: url.clone(),
-                cached: cache_file.exists(),
-            }
-        })
-        .collect();
-
     let status = Status {
         version: env!("CARGO_PKG_VERSION").to_string(),
         pais_dir: pais_dir.display().to_string(),
@@ -194,7 +171,6 @@ pub fn run(format: OutputFormat, config: &Config) -> Result<()> {
         hooks,
         observability,
         history,
-        registries,
     };
 
     match format {
@@ -410,32 +386,6 @@ fn print_text_status(status: &Status) {
                 name,
                 stats.count.to_string().yellow(),
                 latest
-            );
-        }
-    }
-    println!();
-
-    // Registries
-    println!(
-        "{} ({}):",
-        "Registries".cyan(),
-        format!("{} configured", status.registries.len()).dimmed()
-    );
-    if status.registries.is_empty() {
-        println!("  {}", "(none)".dimmed());
-    } else {
-        for registry in &status.registries {
-            let cached_badge = if registry.cached {
-                "[cached]".green().to_string()
-            } else {
-                "[not cached]".yellow().to_string()
-            };
-            println!(
-                "  {} {} {} {}",
-                "✓".green(),
-                registry.name,
-                cached_badge,
-                registry.url.dimmed()
             );
         }
     }

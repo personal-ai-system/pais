@@ -8,7 +8,6 @@ pub mod hook;
 pub mod init;
 pub mod observe;
 pub mod plugin;
-pub mod registry;
 pub mod run;
 pub mod security;
 pub mod skill;

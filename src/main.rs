@@ -18,9 +18,9 @@ mod plugin;
 mod skill;
 
 use cli::{Cli, Commands};
-use config::Config;
+use config::{Config, LogLevel};
 
-fn setup_logging() -> Result<()> {
+fn setup_logging(log_level: &LogLevel) -> Result<()> {
     // Create log directory
     let log_dir = dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("."))
@@ -40,11 +40,32 @@ fn setup_logging() -> Result<()> {
             .context("Failed to open log file")?,
     );
 
-    env_logger::Builder::from_default_env()
-        .target(env_logger::Target::Pipe(target))
-        .init();
+    // RUST_LOG env var takes precedence, otherwise use config log_level
+    let mut builder = env_logger::Builder::new();
+
+    if std::env::var("RUST_LOG").is_ok() {
+        // Let env_logger parse RUST_LOG
+        builder.parse_default_env();
+    } else {
+        // Use log level from config
+        builder.filter_level(match log_level {
+            LogLevel::Trace => log::LevelFilter::Trace,
+            LogLevel::Debug => log::LevelFilter::Debug,
+            LogLevel::Info => log::LevelFilter::Info,
+            LogLevel::Warn => log::LevelFilter::Warn,
+            LogLevel::Error => log::LevelFilter::Error,
+            LogLevel::Off => log::LevelFilter::Off,
+        });
+    }
+
+    builder.target(env_logger::Target::Pipe(target)).init();
 
     info!("Logging initialized, writing to: {}", log_file.display());
+    info!(
+        "Log level: {} (from {})",
+        log_level.as_filter(),
+        if std::env::var("RUST_LOG").is_ok() { "RUST_LOG env" } else { "config" }
+    );
     Ok(())
 }
 
@@ -58,7 +79,6 @@ fn run(cli: Cli, config: Config) -> Result<()> {
         Commands::History { action } => commands::history::run(action, &config),
         Commands::Config { action } => commands::config::run(action, &config),
         Commands::Context { action } => commands::context::run(action, &config),
-        Commands::Registry { action } => commands::registry::run(action, &config),
         Commands::Security { action } => commands::security::run(action, &config),
         Commands::Observe { filter, last, payload } => {
             commands::observe::run(filter.as_deref(), last, payload, &config)
@@ -73,14 +93,14 @@ fn run(cli: Cli, config: Config) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    // Setup logging first
-    setup_logging().context("Failed to setup logging")?;
-
-    // Parse CLI arguments
+    // Parse CLI arguments first
     let cli = Cli::parse();
 
-    // Load configuration
+    // Load configuration (before logging, so log messages in Config::load are silent)
     let config = Config::load(cli.config.as_ref()).context("Failed to load configuration")?;
+
+    // Setup logging with log level from config (or RUST_LOG env var)
+    setup_logging(&config.log_level).context("Failed to setup logging")?;
 
     info!("Starting pais with config from: {:?}", cli.config);
 

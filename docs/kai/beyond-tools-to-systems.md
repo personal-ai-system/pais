@@ -1,7 +1,7 @@
 # Beyond Tools to Systems
 
-**Author:** Stephen Jones AI  
-**Date:** September 6, 2025  
+**Author:** Stephen Jones AI
+**Date:** September 6, 2025
 **Source:** [Stephen Jones AI](https://stephenjonesai.substack.com/)
 
 ---
@@ -51,7 +51,7 @@ Miessler's approach centers on what he calls **"file-system-based context."** In
 ```
 ~/.claude/context/
 ├── projects/          # Project-specific knowledge
-├── methodologies/     # Structured approaches  
+├── methodologies/     # Structured approaches
 ├── philosophy/        # Core beliefs and principles
 ├── tools/            # Tool documentation
 └── tasks/            # Task-specific workflows

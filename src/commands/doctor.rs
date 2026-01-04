@@ -55,43 +55,6 @@ pub fn run(config: &Config) -> Result<()> {
         println!("{} History directory missing: {}", "⚠".yellow(), history_dir.display());
     }
 
-    // Check registries directory
-    let registries_dir = Config::expand_path(&config.paths.registries);
-    if registries_dir.exists() {
-        let count = count_registries(&registries_dir);
-        println!(
-            "{} Registries directory: {} ({} cached)",
-            "✓".green(),
-            registries_dir.display(),
-            count
-        );
-    } else {
-        println!(
-            "{} Registries directory missing: {}",
-            "⚠".yellow(),
-            registries_dir.display()
-        );
-    }
-
-    println!();
-
-    // Check configured registries
-    println!("{}", "Registries:".bold());
-    if config.registries.is_empty() {
-        println!("  {} No registries configured", "⚠".yellow());
-    } else {
-        for (name, url) in &config.registries {
-            let cache_file = registries_dir.join(format!("{}.yaml", name));
-            if cache_file.exists() {
-                println!("  {} {} (cached)", "✓".green(), name);
-            } else {
-                println!("  {} {} (not cached)", "⚠".yellow(), name);
-                println!("    URL: {}", url.dimmed());
-                println!("    Run {} to fetch", "pais registry update".cyan());
-            }
-        }
-    }
-
     println!();
 
     // Check dependencies
@@ -240,17 +203,6 @@ fn count_plugins(dir: &std::path::Path) -> usize {
             entries
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().join("plugin.yaml").exists())
-                .count()
-        })
-        .unwrap_or(0)
-}
-
-fn count_registries(dir: &std::path::Path) -> usize {
-    fs::read_dir(dir)
-        .map(|entries| {
-            entries
-                .filter_map(|e| e.ok())
-                .filter(|e| e.path().extension().is_some_and(|ext| ext == "yaml"))
                 .count()
         })
         .unwrap_or(0)

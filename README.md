@@ -1,4 +1,4 @@
-# PAIS — Personal AI Infrastructure
+# PAIS — Personal AI System
 
 A modular plugin system for Claude Code, designed for extensibility and team sharing.
 

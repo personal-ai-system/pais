@@ -1,14 +1,15 @@
 # PAIS Configuration (development/example)
+# Personal AI System
 # Copy to ~/.config/pais/pais.yaml for personal use
+
+# Log level: trace, debug, info, warn, error, off
+# Can be overridden by RUST_LOG env var
+log-level: info
 
 paths:
   plugins: ~/.config/pais/plugins
   skills: ~/.config/pais/skills
   history: ~/.config/pais/history
-  registries: ~/.config/pais/registries
-
-registries:
-  core: https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.yaml
 
 hooks:
   security-enabled: true
@@ -22,14 +23,14 @@ observability:
 
 environment:
   repos-dir: ~/repos/
-  
+
   tool-preferences:
     ls: eza
     tree: eza --tree
     grep: rg
     find: fd
     cat: bat
-  
+
   tools:
     otto:
       github: otto-rs/otto
@@ -37,4 +38,3 @@ environment:
     clone:
       github: scottidler/clone
       description: Git clone to repos-dir/{org}/{repo}
-

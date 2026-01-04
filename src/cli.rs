@@ -34,7 +34,7 @@ impl OutputFormat {
 #[derive(Parser)]
 #[command(
     name = "pais",
-    about = "Personal AI Infrastructure - A modular plugin system for Claude Code",
+    about = "Personal AI System - A modular plugin system for Claude Code",
     version = env!("GIT_DESCRIBE"),
     after_help = "Logs are written to: ~/.local/share/pais/logs/pais.log\n\nDocumentation: https://github.com/scottidler/pais"
 )]
@@ -109,12 +109,6 @@ pub enum Commands {
     Context {
         #[command(subcommand)]
         action: ContextAction,
-    },
-
-    /// Manage plugin registries
-    Registry {
-        #[command(subcommand)]
-        action: RegistryAction,
     },
 
     /// Security validation tools
@@ -511,53 +505,6 @@ pub enum ConfigAction {
 
         /// New value
         value: String,
-    },
-}
-
-#[derive(Subcommand)]
-pub enum RegistryAction {
-    /// List configured registries
-    List,
-
-    /// Add a registry
-    Add {
-        /// Registry name
-        name: String,
-
-        /// Registry URL
-        url: String,
-    },
-
-    /// Remove a registry
-    Remove {
-        /// Registry name
-        name: String,
-    },
-
-    /// Update registry listings
-    Update {
-        /// Registry name (updates all if omitted)
-        name: Option<String>,
-    },
-
-    /// Search for plugins in cached registries
-    Search {
-        /// Search query (matches name, description, tags)
-        query: String,
-
-        /// Output format (default: text for TTY, json for pipes)
-        #[arg(long, short = 'o', value_enum)]
-        format: Option<OutputFormat>,
-    },
-
-    /// Show all plugins in a cached registry
-    Show {
-        /// Registry name
-        name: String,
-
-        /// Output format (default: text for TTY, json for pipes)
-        #[arg(long, short = 'o', value_enum)]
-        format: Option<OutputFormat>,
     },
 }
 

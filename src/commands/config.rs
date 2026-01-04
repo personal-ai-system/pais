@@ -29,13 +29,6 @@ fn show(format: OutputFormat, config: &Config) -> Result<()> {
             println!("  plugins: {}", config.paths.plugins.display());
             println!("  skills: {}", config.paths.skills.display());
             println!("  history: {}", config.paths.history.display());
-            println!("  registries: {}", config.paths.registries.display());
-            println!();
-
-            println!("{}:", "registries".cyan());
-            for (name, url) in &config.registries {
-                println!("  {}: {}", name, url.dimmed());
-            }
             println!();
 
             println!("{}:", "hooks".cyan());
@@ -52,9 +45,9 @@ fn get(key: &str, config: &Config) -> Result<()> {
         "paths.plugins" => Some(config.paths.plugins.display().to_string()),
         "paths.skills" => Some(config.paths.skills.display().to_string()),
         "paths.history" => Some(config.paths.history.display().to_string()),
-        "paths.registries" => Some(config.paths.registries.display().to_string()),
         "hooks.security_enabled" => Some(config.hooks.security_enabled.to_string()),
         "hooks.history_enabled" => Some(config.hooks.history_enabled.to_string()),
+        "log_level" | "log-level" => Some(config.log_level.as_filter().to_string()),
         _ => None,
     };
 
@@ -78,7 +71,6 @@ fn set(key: &str, value: &str, config: &Config) -> Result<()> {
         "paths.plugins" => new_config.paths.plugins = value.into(),
         "paths.skills" => new_config.paths.skills = value.into(),
         "paths.history" => new_config.paths.history = value.into(),
-        "paths.registries" => new_config.paths.registries = value.into(),
         "hooks.security_enabled" => {
             new_config.hooks.security_enabled =
                 value.parse().context("Invalid boolean value (use 'true' or 'false')")?;

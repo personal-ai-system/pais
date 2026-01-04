@@ -1,6 +1,6 @@
 # PAIS Vision
 
-> Personal AI Infrastructure — A modular plugin system for Claude Code, built for team sharing.
+> Personal AI System — A modular plugin system for Claude Code, built for team sharing.
 
 ---
 

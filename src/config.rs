@@ -4,12 +4,41 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Log level for RUST_LOG
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    #[default]
+    Info,
+    Warn,
+    Error,
+    Off,
+}
+
+impl LogLevel {
+    /// Convert to RUST_LOG filter string
+    pub fn as_filter(&self) -> &'static str {
+        match self {
+            LogLevel::Trace => "trace",
+            LogLevel::Debug => "debug",
+            LogLevel::Info => "info",
+            LogLevel::Warn => "warn",
+            LogLevel::Error => "error",
+            LogLevel::Off => "off",
+        }
+    }
+}
+
 /// Main PAIS configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Config {
+    /// Log level (can be overridden by RUST_LOG env var)
+    #[serde(rename = "log-level")]
+    pub log_level: LogLevel,
     pub paths: PathsConfig,
-    pub registries: HashMap<String, String>,
     pub hooks: HooksConfig,
     pub observability: ObservabilityConfig,
     pub environment: EnvironmentConfig,
@@ -21,7 +50,6 @@ pub struct PathsConfig {
     pub plugins: PathBuf,
     pub skills: PathBuf,
     pub history: PathBuf,
-    pub registries: PathBuf,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -62,16 +90,12 @@ impl Default for Config {
         let pais_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("pais");
 
         Self {
+            log_level: LogLevel::default(),
             paths: PathsConfig {
                 plugins: pais_dir.join("plugins"),
                 skills: pais_dir.join("skills"),
                 history: pais_dir.join("history"),
-                registries: pais_dir.join("registries"),
             },
-            registries: HashMap::from([(
-                "core".to_string(),
-                "https://raw.githubusercontent.com/scottidler/pais/main/registry/plugins.yaml".to_string(),
-            )]),
             hooks: HooksConfig::default(),
             observability: ObservabilityConfig::default(),
             environment: EnvironmentConfig::default(),
@@ -87,7 +111,6 @@ impl Default for PathsConfig {
             plugins: pais_dir.join("plugins"),
             skills: pais_dir.join("skills"),
             history: pais_dir.join("history"),
-            registries: pais_dir.join("registries"),
         }
     }
 }
@@ -238,7 +261,7 @@ mod tests {
         let config = Config::default();
         assert!(config.hooks.security_enabled);
         assert!(config.hooks.history_enabled);
-        assert!(config.registries.contains_key("core"));
+        assert_eq!(config.log_level, LogLevel::Info);
     }
 
     #[test]
@@ -306,7 +329,7 @@ mod tests {
         let yaml_str = serde_yaml::to_string(&config).expect("Failed to serialize");
         let parsed: Config = serde_yaml::from_str(&yaml_str).expect("Failed to deserialize");
         assert_eq!(parsed.hooks.security_enabled, config.hooks.security_enabled);
-        assert_eq!(parsed.registries.len(), config.registries.len());
+        assert_eq!(parsed.log_level, config.log_level);
     }
 
     #[test]
@@ -372,14 +395,12 @@ tools:
     fn test_parse_realistic_config_file() {
         // Test a realistic config file as users would write it
         let yaml = r#"
+log-level: debug
+
 paths:
   plugins: ~/.config/pais/plugins
   skills: ~/.config/pais/skills
   history: ~/.config/pais/history
-  registries: ~/.config/pais/registries
-
-registries:
-  core: https://example.com/registry.yaml
 
 hooks:
   security-enabled: true
@@ -404,6 +425,9 @@ environment:
 "#;
         let config: Config = serde_yaml::from_str(yaml).expect("Failed to parse realistic config file");
 
+        // Verify log level
+        assert_eq!(config.log_level, LogLevel::Debug);
+
         // Verify paths
         assert_eq!(config.paths.plugins, PathBuf::from("~/.config/pais/plugins"));
 
@@ -420,5 +444,23 @@ environment:
         assert_eq!(config.environment.repos_dir, Some(PathBuf::from("~/repos/")));
         assert_eq!(config.environment.tool_preferences.get("ls"), Some(&"eza".to_string()));
         assert!(config.environment.tools.contains_key("clone"));
+    }
+
+    #[test]
+    fn test_log_level_parsing() {
+        let yaml = "log-level: trace";
+        let config: Config = serde_yaml::from_str(yaml).expect("Failed to parse log level");
+        assert_eq!(config.log_level, LogLevel::Trace);
+        assert_eq!(config.log_level.as_filter(), "trace");
+
+        let yaml = "log-level: debug";
+        let config: Config = serde_yaml::from_str(yaml).expect("Failed to parse log level");
+        assert_eq!(config.log_level, LogLevel::Debug);
+        assert_eq!(config.log_level.as_filter(), "debug");
+
+        let yaml = "log-level: warn";
+        let config: Config = serde_yaml::from_str(yaml).expect("Failed to parse log level");
+        assert_eq!(config.log_level, LogLevel::Warn);
+        assert_eq!(config.log_level.as_filter(), "warn");
     }
 }

@@ -1,6 +1,6 @@
 # PAIS Planning Documentation
 
-> Personal AI Infrastructure — Built on Claude Code
+> Personal AI System — Built on Claude Code
 
 ---
 

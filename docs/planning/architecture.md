@@ -1,6 +1,6 @@
 # PAIS Architecture
 
-> Technical design for Personal AI Infrastructure built on Claude Code.
+> Technical design for Personal AI System built on Claude Code.
 
 ---
 

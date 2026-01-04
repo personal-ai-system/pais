@@ -114,7 +114,6 @@ pub fn generate_architecture_doc(config: &Config) -> Result<String> {
     doc.push_str(&format!("- **Plugins:** `{}`\n", config.paths.plugins.display()));
     doc.push_str(&format!("- **Skills:** `{}`\n", config.paths.skills.display()));
     doc.push_str(&format!("- **History:** `{}`\n", config.paths.history.display()));
-    doc.push_str(&format!("- **Registries:** `{}`\n", config.paths.registries.display()));
     doc.push('\n');
 
     Ok(doc)
