@@ -6,9 +6,15 @@
 //! - Agent's `history_category` if agent detected
 //! - `learnings`: If contains problem-solving narratives
 //! - `sessions`: Default for regular work sessions
+//!
+//! ## Transcript Reading
+//!
+//! Claude Code provides `transcript_path` in Stop events, pointing to the session's
+//! JSONL file. We read this to extract the actual conversation content.
 
 #![allow(dead_code)] // with_agents_dir - for testing/custom config
 
+use std::fs;
 use std::path::PathBuf;
 
 use super::{HookEvent, HookHandler, HookResult};
@@ -223,6 +229,58 @@ impl HookHandler for HistoryHandler {
     }
 }
 
+/// Extract the last assistant response from a Claude Code transcript file.
+///
+/// Claude Code provides `transcript_path` in Stop events, pointing to a JSONL file
+/// containing the full conversation. We read backwards to find the last assistant message.
+fn extract_response_from_transcript(transcript_path: &str) -> Option<String> {
+    let content = fs::read_to_string(transcript_path).ok()?;
+    let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+
+    // Parse backwards to find the last assistant message
+    for line in lines.iter().rev() {
+        if let Ok(entry) = serde_json::from_str::<serde_json::Value>(line) {
+            // Check if this is an assistant message
+            if entry.get("type").and_then(|t| t.as_str()) == Some("assistant") {
+                if let Some(message) = entry.get("message") {
+                    if let Some(content) = message.get("content") {
+                        // Extract text from content (can be array or string)
+                        let text = extract_text_from_content(content);
+                        if text.len() > 50 {
+                            // Limit to 5000 chars to prevent huge entries
+                            return Some(text.chars().take(5000).collect());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Extract text from Claude's message content (handles array of content blocks)
+fn extract_text_from_content(content: &serde_json::Value) -> String {
+    match content {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Array(arr) => arr
+            .iter()
+            .filter_map(|item| {
+                // Handle {"type": "text", "text": "..."} blocks
+                if let Some(text) = item.get("text").and_then(|t| t.as_str()) {
+                    Some(text.to_string())
+                } else if let Some(s) = item.as_str() {
+                    Some(s.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+        _ => String::new(),
+    }
+}
+
 /// Build a session summary from the Stop payload
 fn build_session_summary(payload: &serde_json::Value) -> String {
     let mut summary = String::new();
@@ -240,10 +298,21 @@ fn build_session_summary(payload: &serde_json::Value) -> String {
         summary.push_str(&format!("**Stop reason:** {}\n\n", reason));
     }
 
-    // Add any assistant message that might be the final response
-    if let Some(response) = payload.get("response").and_then(|v| v.as_str()) {
+    // Try to get response from payload first, then from transcript_path
+    let response = payload
+        .get("response")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .or_else(|| {
+            payload
+                .get("transcript_path")
+                .and_then(|v| v.as_str())
+                .and_then(extract_response_from_transcript)
+        });
+
+    if let Some(response_text) = response {
         summary.push_str("## Final Response\n\n");
-        summary.push_str(response);
+        summary.push_str(&response_text);
         summary.push_str("\n\n");
     }
 
@@ -272,7 +341,8 @@ fn build_session_summary(payload: &serde_json::Value) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
-    use tempfile::tempdir;
+    use std::io::Write;
+    use tempfile::{tempdir, NamedTempFile};
 
     #[test]
     fn test_build_session_summary() {
@@ -288,12 +358,52 @@ mod tests {
     }
 
     #[test]
+    fn test_build_session_summary_with_transcript() {
+        // Create a fake transcript file
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content = r#"{"type":"user","message":{"content":"Hello"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"I fixed the bug by updating the configuration. The root cause was a missing environment variable that caused the authentication to fail."}]}}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "stop_reason": "completed",
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+        assert!(summary.contains("fixed the bug"));
+        assert!(summary.contains("root cause"));
+    }
+
+    #[test]
+    fn test_extract_text_from_content_string() {
+        let content = json!("Hello world");
+        let text = extract_text_from_content(&content);
+        assert_eq!(text, "Hello world");
+    }
+
+    #[test]
+    fn test_extract_text_from_content_array() {
+        let content = json!([
+            {"type": "text", "text": "First part"},
+            {"type": "text", "text": "Second part"}
+        ]);
+        let text = extract_text_from_content(&content);
+        assert!(text.contains("First part"));
+        assert!(text.contains("Second part"));
+    }
+
+    #[test]
     fn test_determine_category_content_based() {
         let temp_dir = tempdir().expect("Failed to create temp dir");
         let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
 
         // Content-based categorization (no agent)
-        let (category, agent) = handler.determine_category(None, "debugging the problem and found the root cause");
+        let (category, agent) =
+            handler.determine_category(None, "debugging the problem and found the root cause");
         assert_eq!(category, "learnings");
         assert!(agent.is_none());
     }
@@ -304,7 +414,8 @@ mod tests {
         let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
 
         // Agent not found, falls back to content analysis
-        let (category, agent) = handler.determine_category(Some("nonexistent"), "regular session work");
+        let (category, agent) =
+            handler.determine_category(Some("nonexistent"), "regular session work");
         assert_eq!(category, "sessions");
         assert!(agent.is_none());
     }
@@ -318,5 +429,27 @@ mod tests {
         assert!(handler.handles(HookEvent::Stop));
         assert!(handler.handles(HookEvent::SessionStart));
         assert!(!handler.handles(HookEvent::PreToolUse));
+    }
+
+    #[test]
+    fn test_transcript_with_learning_content_categorized_correctly() {
+        // Create a transcript with learning indicators
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let transcript_content = r#"{"type":"assistant","message":{"content":[{"type":"text","text":"I discovered the problem was in the authentication module. The root cause was that we were using the wrong API endpoint. I fixed it by updating the configuration."}]}}
+"#;
+        temp_file
+            .write_all(transcript_content.as_bytes())
+            .expect("Failed to write");
+
+        let payload = json!({
+            "transcript_path": temp_file.path().to_str().unwrap()
+        });
+
+        let summary = build_session_summary(&payload);
+
+        // The summary should contain learning indicators
+        assert!(summary.contains("discovered"));
+        assert!(summary.contains("root cause"));
+        assert!(summary.contains("fixed"));
     }
 }
