@@ -200,6 +200,10 @@ impl HistoryHandler {
 }
 
 impl HookHandler for HistoryHandler {
+    fn name(&self) -> &'static str {
+        "history"
+    }
+
     fn handles(&self, event: HookEvent) -> bool {
         self.enabled
             && matches!(

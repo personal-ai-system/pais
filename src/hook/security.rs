@@ -364,6 +364,10 @@ impl SecurityValidator {
 }
 
 impl HookHandler for SecurityValidator {
+    fn name(&self) -> &'static str {
+        "security"
+    }
+
     fn handles(&self, event: HookEvent) -> bool {
         self.enabled && event == HookEvent::PreToolUse
     }

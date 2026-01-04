@@ -25,7 +25,7 @@ pub struct PathsConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(default)]
+#[serde(default, rename_all = "kebab-case")]
 pub struct HooksConfig {
     pub security_enabled: bool,
     pub history_enabled: bool,
@@ -45,7 +45,7 @@ pub enum ObservabilitySink {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(default)]
+#[serde(default, rename_all = "kebab-case")]
 pub struct ObservabilityConfig {
     /// Enable observability
     pub enabled: bool,
@@ -314,5 +314,111 @@ mod tests {
         // Just test that load returns something (default or from file)
         let result = Config::load(None);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_kebab_case_hooks_config() {
+        // This is how users write config files - kebab-case keys
+        let yaml = r#"
+security-enabled: false
+history-enabled: true
+ui-enabled: false
+"#;
+        let config: HooksConfig = serde_yaml::from_str(yaml).expect("Failed to parse kebab-case HooksConfig");
+        assert!(!config.security_enabled);
+        assert!(config.history_enabled);
+        assert!(!config.ui_enabled);
+    }
+
+    #[test]
+    fn test_parse_kebab_case_observability_config() {
+        let yaml = r#"
+enabled: true
+sinks:
+  - file
+  - stdout
+http-endpoint: "https://example.com/logs"
+include-payload: true
+"#;
+        let config: ObservabilityConfig =
+            serde_yaml::from_str(yaml).expect("Failed to parse kebab-case ObservabilityConfig");
+        assert!(config.enabled);
+        assert_eq!(config.sinks.len(), 2);
+        assert_eq!(config.http_endpoint, Some("https://example.com/logs".to_string()));
+        assert!(config.include_payload);
+    }
+
+    #[test]
+    fn test_parse_kebab_case_environment_config() {
+        let yaml = r#"
+repos-dir: ~/repos/
+tool-preferences:
+  ls: eza
+  grep: rg
+tools:
+  otto:
+    github: otto-rs/otto
+    description: CI runner
+"#;
+        let config: EnvironmentConfig =
+            serde_yaml::from_str(yaml).expect("Failed to parse kebab-case EnvironmentConfig");
+        assert_eq!(config.repos_dir, Some(PathBuf::from("~/repos/")));
+        assert_eq!(config.tool_preferences.get("ls"), Some(&"eza".to_string()));
+        assert_eq!(config.tool_preferences.get("grep"), Some(&"rg".to_string()));
+        assert!(config.tools.contains_key("otto"));
+    }
+
+    #[test]
+    fn test_parse_realistic_config_file() {
+        // Test a realistic config file as users would write it
+        let yaml = r#"
+paths:
+  plugins: ~/.config/pais/plugins
+  skills: ~/.config/pais/skills
+  history: ~/.config/pais/history
+  registries: ~/.config/pais/registries
+
+registries:
+  core: https://example.com/registry.yaml
+
+hooks:
+  security-enabled: true
+  history-enabled: true
+  ui-enabled: true
+
+observability:
+  enabled: true
+  sinks:
+    - file
+  include-payload: false
+
+environment:
+  repos-dir: ~/repos/
+  tool-preferences:
+    ls: eza
+    cat: bat
+  tools:
+    clone:
+      github: scottidler/clone
+      description: Git clone helper
+"#;
+        let config: Config = serde_yaml::from_str(yaml).expect("Failed to parse realistic config file");
+
+        // Verify paths
+        assert_eq!(config.paths.plugins, PathBuf::from("~/.config/pais/plugins"));
+
+        // Verify hooks (kebab-case keys)
+        assert!(config.hooks.security_enabled);
+        assert!(config.hooks.history_enabled);
+        assert!(config.hooks.ui_enabled);
+
+        // Verify observability (kebab-case keys)
+        assert!(config.observability.enabled);
+        assert!(!config.observability.include_payload);
+
+        // Verify environment (kebab-case keys)
+        assert_eq!(config.environment.repos_dir, Some(PathBuf::from("~/repos/")));
+        assert_eq!(config.environment.tool_preferences.get("ls"), Some(&"eza".to_string()));
+        assert!(config.environment.tools.contains_key("clone"));
     }
 }

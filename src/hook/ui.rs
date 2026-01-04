@@ -45,6 +45,10 @@ impl UiHandler {
 }
 
 impl HookHandler for UiHandler {
+    fn name(&self) -> &'static str {
+        "ui"
+    }
+
     fn handles(&self, event: HookEvent) -> bool {
         self.enabled && event == HookEvent::UserPromptSubmit
     }

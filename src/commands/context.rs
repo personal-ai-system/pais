@@ -184,30 +184,56 @@ fn generate_environment_context(config: &Config) -> Option<String> {
 
 /// Inject skill context for SessionStart hook
 fn inject_context(raw: bool, config: &Config) -> Result<()> {
+    log::debug!("Injecting context (raw={})", raw);
+
     let skills_dir = Config::expand_path(&config.paths.skills);
+    log::debug!("Skills directory: {}", skills_dir.display());
+
     let context_path = skills_dir.join("context-snippet.md");
 
     // Generate or load the index
     let index = generate_index(&skills_dir).context("Failed to generate skill index")?;
+    log::debug!(
+        "Index generated: {} skills ({} core, {} deferred)",
+        index.total_skills,
+        index.core_count,
+        index.deferred_count
+    );
 
     // Load all core-tier skills (Tier 0)
     let core_skills = load_core_skills(&skills_dir, &index);
+    log::debug!(
+        "Loaded {} core skills: [{}]",
+        core_skills.len(),
+        core_skills
+            .iter()
+            .map(|(n, _)| n.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
 
     // Generate environment context
     let env_context = generate_environment_context(config);
+    log::debug!(
+        "Environment context: {}",
+        if env_context.is_some() { "generated" } else { "none" }
+    );
 
     // Check if context file exists (Tier 1 - deferred skills)
     let context_content = if context_path.exists() {
+        log::debug!("Loading deferred skills context from: {}", context_path.display());
         Some(
             fs::read_to_string(&context_path)
                 .with_context(|| format!("Failed to read context file: {}", context_path.display()))?,
         )
     } else {
+        log::debug!("No deferred skills context file found");
         None
     };
 
     // If neither exists, warn and exit
     if core_skills.is_empty() && context_content.is_none() {
+        log::warn!("No skills found - run 'pais skill index' first");
         eprintln!("[PAIS] No skills found. Run 'pais skill index' first.");
         return Ok(());
     }

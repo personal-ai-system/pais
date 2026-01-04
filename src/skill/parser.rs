@@ -138,6 +138,9 @@ pub struct SkillMetadata {
     /// Loading tier (core or deferred)
     #[serde(default)]
     pub tier: SkillTier,
+    /// Explicit trigger phrases from frontmatter
+    #[serde(default)]
+    pub triggers: Vec<String>,
 }
 
 /// Parse SKILL.md and extract frontmatter metadata

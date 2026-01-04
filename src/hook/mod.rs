@@ -84,6 +84,8 @@ impl HookResult {
 
 /// A hook handler
 pub trait HookHandler: Send + Sync {
+    /// Handler name for logging
+    fn name(&self) -> &'static str;
     fn handles(&self, event: HookEvent) -> bool;
     fn handle(&self, event: HookEvent, payload: &serde_json::Value) -> HookResult;
 }

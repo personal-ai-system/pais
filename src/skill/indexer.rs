@@ -154,6 +154,8 @@ pub fn extract_triggers(description: &str) -> Vec<String> {
 
 /// Generate a skill index from a skills directory
 pub fn generate_index(skills_dir: &Path) -> Result<SkillIndex> {
+    log::debug!("Generating skill index from: {}", skills_dir.display());
+
     let mut index = SkillIndex {
         generated: chrono::Utc::now().to_rfc3339(),
         total_skills: 0,
@@ -163,6 +165,7 @@ pub fn generate_index(skills_dir: &Path) -> Result<SkillIndex> {
     };
 
     if !skills_dir.exists() {
+        log::debug!("Skills directory does not exist: {}", skills_dir.display());
         return Ok(index);
     }
 
@@ -178,6 +181,7 @@ pub fn generate_index(skills_dir: &Path) -> Result<SkillIndex> {
 
         let skill_md = path.join("SKILL.md");
         if !skill_md.exists() {
+            log::trace!("No SKILL.md in: {}", path.display());
             continue;
         }
 
@@ -200,10 +204,40 @@ pub fn generate_index(skills_dir: &Path) -> Result<SkillIndex> {
                     .map(|n| format!("{}/SKILL.md", n.to_string_lossy()))
                     .unwrap_or_default();
 
-                let triggers = extract_triggers(&metadata.description);
+                // Use frontmatter triggers if present, otherwise extract from description
+                let triggers = if !metadata.triggers.is_empty() {
+                    log::debug!(
+                        "Indexed skill: {} (tier={:?}, triggers from frontmatter=[{}])",
+                        metadata.name,
+                        tier,
+                        metadata.triggers.join(", ")
+                    );
+                    metadata.triggers.clone()
+                } else {
+                    let extracted = extract_triggers(&metadata.description);
+                    log::debug!(
+                        "Indexed skill: {} (tier={:?}, triggers extracted=[{}])",
+                        metadata.name,
+                        tier,
+                        extracted.join(", ")
+                    );
+                    extracted
+                };
 
                 // Discover workflows for this skill
                 let workflows = discover_workflows(&path).map(|w| w.routes).unwrap_or_default();
+                if !workflows.is_empty() {
+                    log::debug!(
+                        "  {} workflows: [{}]",
+                        workflows.len(),
+                        workflows
+                            .iter()
+                            .map(|w| &w.intent)
+                            .cloned()
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    );
+                }
 
                 let entry = SkillIndexEntry {
                     name: metadata.name.clone(),
@@ -227,6 +261,13 @@ pub fn generate_index(skills_dir: &Path) -> Result<SkillIndex> {
             }
         }
     }
+
+    log::debug!(
+        "Skill index complete: {} total ({} core, {} deferred)",
+        index.total_skills,
+        index.core_count,
+        index.deferred_count
+    );
 
     Ok(index)
 }
