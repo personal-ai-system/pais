@@ -75,19 +75,42 @@ fn build_session_summary(payload: &serde_json::Value) -> String {
 
 **Result:** Empty summaries because the data isn't there.
 
-### What Daniel Likely Does
+### What Daniel ACTUALLY Does (from PAI source code)
 
-Daniel's Kai probably reads directly from Claude Code's session files:
+**Key discovery:** Claude Code hooks provide `transcript_path` in the Stop event payload!
 
+From `Personal_AI_Infrastructure/Packs/kai-history-system/src/stop-hook.ts`:
+
+```typescript
+interface StopPayload {
+  stop_hook_active: boolean;
+  transcript_path?: string;  // <-- THIS IS THE KEY!
+  response?: string;
+  session_id?: string;
+}
+
+/**
+ * Extract the last assistant response from a transcript file.
+ * Claude Code sends transcript_path but not response in Stop events.
+ */
+function extractResponseFromTranscript(transcriptPath: string): string | null {
+  // Reads the JSONL transcript file and extracts the last assistant message
+  const content = readFileSync(transcriptPath, 'utf-8');
+  // ... parses JSONL, finds last assistant message
+}
+
+// In main():
+let response = payload.response;
+if (!response && payload.transcript_path) {
+  response = extractResponseFromTranscript(payload.transcript_path) || undefined;
+}
 ```
-~/.claude/projects/<project>/<session-id>.jsonl
-```
 
-These files contain the FULL conversation. PAIS would need to:
-1. Detect when a session ends (we already do this via hooks)
-2. Read the corresponding `.jsonl` session file
-3. Parse and summarize the content
-4. Store learnings/decisions/summaries
+**PAIS doesn't read `transcript_path` at all** - confirmed via grep:
+```bash
+$ grep -r "transcript_path" src/
+# No matches found
+```
 
 ---
 
@@ -117,77 +140,106 @@ These files contain the FULL conversation. PAIS would need to:
 
 ## Required Fixes
 
-### Priority 1: Read Claude Code Session Files
+### Priority 1: Read `transcript_path` from Stop Hook
 
-Add to PAIS:
-1. On `SessionEnd` hook, find the session's `.jsonl` file
-2. Parse the JSONL to extract conversation
-3. Summarize using LLM or heuristics
-4. Store in `history/sessions/` with actual content
+**The simplest fix:** Claude Code already provides `transcript_path` in Stop events. 
 
-**Implementation location:** `src/hook/history.rs`
-
-### Priority 2: Learning Extraction
-
-After session parsing:
-1. Identify problem-solving narratives
-2. Extract what was learned
-3. Store in `history/learnings/`
-
-### Priority 3: Decision Tracking
-
-On major decisions (detected via patterns):
-1. Record the decision
-2. Record the reasoning
-3. Store in `history/decisions/`
-
-### Priority 4: Skill Self-Update
-
-Use learnings to:
-1. Suggest skill improvements
-2. Auto-update SKILL.md files
-3. Track skill evolution
-
----
-
-## Session File Integration
-
-### Finding Session Files
+Add to `src/hook/history.rs`:
 
 ```rust
-// On SessionEnd, locate the session file
-fn find_session_file(session_id: &str) -> Option<PathBuf> {
-    let claude_projects = home_dir()?.join(".claude/projects");
-    for project_dir in fs::read_dir(&claude_projects).ok()? {
-        let session_file = project_dir.path().join(format!("{}.jsonl", session_id));
-        if session_file.exists() {
-            return Some(session_file);
+fn extract_response_from_transcript(transcript_path: &str) -> Option<String> {
+    let content = std::fs::read_to_string(transcript_path).ok()?;
+    
+    // Parse JSONL backwards to find last assistant message
+    for line in content.lines().rev() {
+        if let Ok(entry) = serde_json::from_str::<serde_json::Value>(line) {
+            if entry.get("type").and_then(|t| t.as_str()) == Some("assistant") {
+                if let Some(content) = entry.get("message").and_then(|m| m.get("content")) {
+                    // Extract text from content array
+                    return extract_text_content(content);
+                }
+            }
         }
     }
     None
 }
+
+// In capture_stop_event():
+let response = payload.get("response")
+    .and_then(|v| v.as_str())
+    .map(|s| s.to_string())
+    .or_else(|| {
+        payload.get("transcript_path")
+            .and_then(|v| v.as_str())
+            .and_then(extract_response_from_transcript)
+    });
 ```
 
-### Parsing Session Content
+**Implementation location:** `src/hook/history.rs`
 
-```rust
-// Parse JSONL lines
-fn parse_session_file(path: &Path) -> Vec<SessionMessage> {
-    fs::read_to_string(path)
-        .ok()?
-        .lines()
-        .filter_map(|line| serde_json::from_str(line).ok())
-        .filter(|msg| matches!(msg.type_, "user" | "assistant"))
-        .collect()
+### Priority 2: Learning Detection (Already Implemented!)
+
+PAIS already has `categorize_content()` in `src/history/categorize.rs` that detects learnings.
+
+The issue is it receives empty content. Once we read `transcript_path`, this will work.
+
+### Priority 3: Session Summary Analysis
+
+Copy Daniel's approach from `capture-session-summary.ts`:
+- Parse raw-events to find files changed, commands executed
+- Determine session focus based on patterns
+- Store meaningful summary instead of "Session completed"
+
+### Priority 4: Decision Tracking
+
+Add detection for decision patterns:
+- "decided to", "chose", "went with", "architecture"
+- Route to `history/decisions/`
+
+---
+
+## Daniel's Learning Detection Algorithm
+
+From `stop-hook.ts`:
+
+```typescript
+function hasLearningIndicators(text: string): boolean {
+  const indicators = [
+    'problem', 'solved', 'discovered', 'fixed', 'learned', 'realized',
+    'figured out', 'root cause', 'debugging', 'issue was', 'turned out',
+    'mistake', 'error', 'bug', 'solution'
+  ];
+  const lowerText = text.toLowerCase();
+  const matches = indicators.filter(i => lowerText.includes(i));
+  return matches.length >= 2;  // Need 2+ indicators
 }
 ```
 
-### Summarization
+PAIS has similar logic in `src/history/categorize.rs` - it just needs content to analyze!
 
-Could use:
-- Heuristic extraction (first/last messages, tool list)
-- LLM summarization (call Claude API)
-- Template-based (fill in structured format)
+---
+
+## Session Summary Analysis
+
+From `capture-session-summary.ts`:
+
+```typescript
+// Analyze raw-events to determine what happened
+function analyzeSession(conversationId: string, yearMonth: string) {
+  // Read raw-outputs JSONL files
+  // Extract: filesChanged, commandsExecuted, toolsUsed
+  // Determine focus based on file patterns
+}
+
+function determineSessionFocus(filesChanged: string[], commandsExecuted: string[]): string {
+  if (filePatterns.some(f => f.includes('/hooks/'))) return 'hook-development';
+  if (filePatterns.some(f => f.includes('/skills/'))) return 'skill-updates';
+  if (commandsExecuted.some(cmd => cmd.includes('git commit'))) return 'git-operations';
+  // etc.
+}
+```
+
+PAIS captures raw-events already. We just need to analyze them on SessionEnd.
 
 ---
 
