@@ -5,6 +5,7 @@ use std::io::{self, Read};
 use crate::cli::HookAction;
 use crate::config::Config;
 use crate::hook::history::HistoryHandler;
+use crate::hook::research::ResearchPathValidator;
 use crate::hook::security::SecurityValidator;
 use crate::hook::ui::UiHandler;
 use crate::hook::{HookEvent, HookHandler, HookResult};
@@ -62,16 +63,19 @@ fn dispatch(event: &str, payload: Option<&str>, config: &Config) -> Result<()> {
     let security_enabled = config.hooks.security_enabled;
     let history_enabled = config.hooks.history_enabled;
     let ui_enabled = config.hooks.ui_enabled;
+    let research_enabled = config.hooks.research_enabled;
 
     log::debug!(
-        "Handler config: security={}, history={}, ui={}",
+        "Handler config: security={}, history={}, ui={}, research={}",
         security_enabled,
         history_enabled,
-        ui_enabled
+        ui_enabled,
+        research_enabled
     );
 
     let handlers: Vec<Box<dyn HookHandler>> = vec![
         Box::new(SecurityValidator::new(security_enabled).with_log_path(history_path.clone())),
+        Box::new(ResearchPathValidator::new(research_enabled)),
         Box::new(HistoryHandler::new(history_enabled, history_path)),
         Box::new(UiHandler::new(ui_enabled)),
     ];

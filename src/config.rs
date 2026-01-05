@@ -58,6 +58,7 @@ pub struct HooksConfig {
     pub security_enabled: bool,
     pub history_enabled: bool,
     pub ui_enabled: bool,
+    pub research_enabled: bool,
 }
 
 /// Observability sink type
@@ -121,6 +122,7 @@ impl Default for HooksConfig {
             security_enabled: true,
             history_enabled: true,
             ui_enabled: true,
+            research_enabled: true,
         }
     }
 }

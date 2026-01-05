@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod dispatch;
 pub mod history;
+pub mod research;
 pub mod security;
 pub mod ui;
 
