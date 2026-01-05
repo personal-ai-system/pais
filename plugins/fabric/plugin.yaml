@@ -1,0 +1,40 @@
+plugin:
+  name: fabric
+  version: 0.1.0
+  description: Daniel Miessler's Fabric patterns - 234 battle-tested AI prompts for analysis, creation, extraction, and improvement tasks
+  authors:
+    - Scott Idler <scott.a.idler@gmail.com>
+  language: mixed
+  license: MIT
+  keywords:
+    - prompts
+    - patterns
+    - analysis
+    - extraction
+    - summarization
+    - writing
+    - fabric
+
+pais:
+  core_version: ">=0.1.0"
+
+provides:
+  patterns:
+    contract: PatternProvider
+    service: fabric-patterns
+
+consumes:
+  # No dependencies
+
+hooks:
+  PreToolUse: []
+  PostToolUse: []
+  Stop: []
+  SessionStart: []
+  SessionEnd: []
+
+config:
+  patterns-dir:
+    type: string
+    required: false
+    default: ~/repos/danielmiessler/Fabric/data/patterns

@@ -1,0 +1,36 @@
+plugin:
+  name: tech-researcher
+  version: 0.2.0
+  description: Research technical topics using GitHub, web search, and Fabric patterns for structured analysis
+  authors:
+    - Scott Idler <scott.a.idler@gmail.com>
+  language: mixed
+  license: MIT
+  keywords:
+    - research
+    - github
+    - documentation
+    - learning
+    - discovery
+    - fabric
+    - analysis
+
+pais:
+  core_version: ">=0.1.0"
+
+provides:
+  research:
+    contract: ResearchProvider
+    service: tech-research
+
+consumes:
+  patterns:
+    contract: PatternProvider
+    optional: false
+
+hooks:
+  PreToolUse: []
+  PostToolUse: []
+  Stop: []
+  SessionStart: []
+  SessionEnd: []
