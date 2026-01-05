@@ -6,6 +6,7 @@ pub mod context;
 pub mod doctor;
 pub mod history;
 pub mod hook;
+pub mod image;
 pub mod init;
 pub mod observe;
 pub mod plugin;

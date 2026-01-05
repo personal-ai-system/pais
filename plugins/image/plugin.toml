@@ -1,0 +1,30 @@
+[plugin]
+name = "image"
+version = "0.1.0"
+description = "Image generation and diagram creation with consistent dark-mode aesthetic"
+authors = ["Scott Idler <scott.a.idler@gmail.com>"]
+language = "mixed"
+license = "MIT"
+
+[pais]
+core_version = ">=0.1.0"
+
+[provides]
+# Provides a Claude Code skill for image/diagram creation
+# Provides pais image generate command (via core binary)
+
+[consumes]
+# No dependencies on other plugins
+
+[config]
+# API keys configured in ~/.config/pais/.env or pais.yaml
+
+[hooks]
+pre_tool_use = false
+post_tool_use = false
+stop = false
+session_start = false
+session_end = false
+
+[build]
+type = "custom"

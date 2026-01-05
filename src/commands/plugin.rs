@@ -3,7 +3,7 @@ use eyre::{Context, Result};
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
-use terminal_size::{terminal_size, Width};
+use terminal_size::{Width, terminal_size};
 
 use crate::cli::{OutputFormat, PluginAction};
 use crate::config::Config;
@@ -40,9 +40,7 @@ struct PluginInfo {
 
 /// Get terminal width, defaulting to 80 if not available
 fn get_terminal_width() -> usize {
-    terminal_size()
-        .map(|(Width(w), _)| w as usize)
-        .unwrap_or(80)
+    terminal_size().map(|(Width(w), _)| w as usize).unwrap_or(80)
 }
 
 /// Wrap text to max_width, returning lines
@@ -144,11 +142,7 @@ fn list(format: OutputFormat, config: &Config) -> Result<()> {
                 let term_width = get_terminal_width();
 
                 // Calculate column widths
-                let name_width = plugins
-                    .iter()
-                    .map(|p| p.manifest.plugin.name.len())
-                    .max()
-                    .unwrap_or(4);
+                let name_width = plugins.iter().map(|p| p.manifest.plugin.name.len()).max().unwrap_or(4);
                 let version_width = plugins
                     .iter()
                     .map(|p| p.manifest.plugin.version.len() + 1)

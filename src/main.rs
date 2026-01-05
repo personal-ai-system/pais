@@ -86,6 +86,7 @@ fn run(cli: Cli, config: Config) -> Result<()> {
         }
         Commands::Agent { action } => commands::agent::run(action, &config),
         Commands::Bundle { action } => commands::bundle::run(action, &config),
+        Commands::Image { action } => commands::image::run(action, &config),
         Commands::Run { plugin, action, args } => commands::run::run(&plugin, &action, &args, &config),
         Commands::Status { format } => commands::status::run(cli::OutputFormat::resolve(format), &config),
         Commands::Sync { dry_run, clean } => commands::sync::run(dry_run, clean, &config),

@@ -144,6 +144,12 @@ pub enum Commands {
         action: BundleAction,
     },
 
+    /// Generate images using AI models
+    Image {
+        #[command(subcommand)]
+        action: ImageAction,
+    },
+
     /// Run a plugin action directly
     Run {
         /// Plugin name
@@ -592,5 +598,46 @@ pub enum SecurityAction {
     Test {
         /// Command to test
         command: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ImageAction {
+    /// Generate an image using AI
+    Generate {
+        /// Image generation prompt
+        #[arg(long, short = 'p')]
+        prompt: String,
+
+        /// AI model to use (gemini, flux, openai)
+        #[arg(long, short = 'm', default_value = "gemini")]
+        model: String,
+
+        /// Image size (1K, 2K, 4K for gemini; 1024x1024 for openai)
+        #[arg(long, short = 's')]
+        size: Option<String>,
+
+        /// Aspect ratio (16:9, 1:1, 3:2, 21:9, etc.)
+        #[arg(long, short = 'a')]
+        aspect_ratio: Option<String>,
+
+        /// Output file path
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Remove background (requires REMOVEBG_API_KEY)
+        #[arg(long)]
+        remove_bg: bool,
+
+        /// Create thumbnail version with dark background
+        #[arg(long)]
+        thumbnail: bool,
+    },
+
+    /// List available AI models
+    Models {
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
     },
 }
