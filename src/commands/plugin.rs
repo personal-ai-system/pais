@@ -3,6 +3,7 @@ use eyre::{Context, Result};
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
+use terminal_size::{terminal_size, Width};
 
 use crate::cli::{OutputFormat, PluginAction};
 use crate::config::Config;
@@ -35,6 +36,51 @@ struct PluginInfo {
     description: String,
     language: String,
     path: String,
+}
+
+/// Get terminal width, defaulting to 80 if not available
+fn get_terminal_width() -> usize {
+    terminal_size()
+        .map(|(Width(w), _)| w as usize)
+        .unwrap_or(80)
+}
+
+/// Wrap text to max_width, returning lines
+fn wrap_text(s: &str, max_width: usize) -> Vec<String> {
+    if max_width == 0 {
+        return vec![s.to_string()];
+    }
+
+    let mut lines = Vec::new();
+    let mut current_line = String::new();
+    let mut current_len = 0;
+
+    for word in s.split_whitespace() {
+        let word_len = word.chars().count();
+
+        if current_len == 0 {
+            current_line = word.to_string();
+            current_len = word_len;
+        } else if current_len + 1 + word_len <= max_width {
+            current_line.push(' ');
+            current_line.push_str(word);
+            current_len += 1 + word_len;
+        } else {
+            lines.push(current_line);
+            current_line = word.to_string();
+            current_len = word_len;
+        }
+    }
+
+    if !current_line.is_empty() {
+        lines.push(current_line);
+    }
+
+    if lines.is_empty() {
+        lines.push(String::new());
+    }
+
+    lines
 }
 
 fn list(format: OutputFormat, config: &Config) -> Result<()> {
@@ -92,20 +138,58 @@ fn list(format: OutputFormat, config: &Config) -> Result<()> {
             }
         }
         OutputFormat::Text => {
-            println!("{}", "Installed plugins:".bold());
-            println!();
-
             if plugins.is_empty() {
-                println!("  {}", "(none)".dimmed());
+                println!("{}", "No plugins installed".dimmed());
             } else {
+                let term_width = get_terminal_width();
+
+                // Calculate column widths
+                let name_width = plugins
+                    .iter()
+                    .map(|p| p.manifest.plugin.name.len())
+                    .max()
+                    .unwrap_or(4);
+                let version_width = plugins
+                    .iter()
+                    .map(|p| p.manifest.plugin.version.len() + 1)
+                    .max()
+                    .unwrap_or(7);
+
+                // Description gets remaining space (minus columns and gaps)
+                let fixed_width = name_width + 2 + version_width + 2;
+                let desc_width = term_width.saturating_sub(fixed_width).max(20);
+
+                // Header
+                println!(
+                    "{:<name_width$}  {:<version_width$}  {}",
+                    "NAME".bold(),
+                    "VERSION".bold(),
+                    "DESCRIPTION".bold(),
+                    name_width = name_width,
+                    version_width = version_width,
+                );
+
+                // Plugins
+                let indent = " ".repeat(fixed_width);
                 for plugin in &plugins {
+                    let desc_lines = wrap_text(&plugin.manifest.plugin.description, desc_width);
+                    // First line with name and version
                     println!(
-                        "  {} {} {}",
+                        "{:<name_width$}  {:<version_width$}  {}",
                         plugin.manifest.plugin.name.green(),
                         format!("v{}", plugin.manifest.plugin.version).dimmed(),
-                        format!("- {}", plugin.manifest.plugin.description).dimmed(),
+                        desc_lines.first().unwrap_or(&String::new()).dimmed(),
+                        name_width = name_width,
+                        version_width = version_width,
                     );
+                    // Continuation lines indented under description
+                    for line in desc_lines.iter().skip(1) {
+                        println!("{}{}", indent, line.dimmed());
+                    }
                 }
+
+                println!();
+                println!("{}", format!("{} plugins", plugins.len()).dimmed());
             }
         }
     }
