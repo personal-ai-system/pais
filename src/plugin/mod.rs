@@ -18,6 +18,7 @@ pub mod executor;
 pub mod loader;
 pub mod manifest;
 pub mod registry;
+pub mod verify;
 
 use crate::hook::{HookEvent, HookResult};
 use manifest::PluginManifest;

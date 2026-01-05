@@ -1,4 +1,5 @@
 pub mod agent;
+pub mod bundle;
 pub mod completions;
 pub mod config;
 pub mod context;

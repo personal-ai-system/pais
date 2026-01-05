@@ -458,13 +458,13 @@ fn test_plugin_verify() {
         &["plugin", "install", source_dir.join("verify-plugin").to_str().unwrap()],
     );
 
-    // Verify plugin
-    let output = run_pais(&pais_dir, &["plugin", "verify", "verify-plugin"]);
+    // Verify plugin (use --format text since tests run without TTY)
+    let output = run_pais(&pais_dir, &["plugin", "verify", "verify-plugin", "--format", "text"]);
     assert!(output.status.success(), "Verify should succeed: {:?}", output);
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("✓") || stdout.contains("valid") || stdout.contains("Manifest"),
+        stdout.contains("✓") || stdout.contains("PASSED") || stdout.contains("passed"),
         "Should show verification passed"
     );
 }

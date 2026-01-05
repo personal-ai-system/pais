@@ -239,19 +239,16 @@ fn extract_response_from_transcript(transcript_path: &str) -> Option<String> {
 
     // Parse backwards to find the last assistant message
     for line in lines.iter().rev() {
-        if let Ok(entry) = serde_json::from_str::<serde_json::Value>(line) {
-            // Check if this is an assistant message
-            if entry.get("type").and_then(|t| t.as_str()) == Some("assistant") {
-                if let Some(message) = entry.get("message") {
-                    if let Some(content) = message.get("content") {
-                        // Extract text from content (can be array or string)
-                        let text = extract_text_from_content(content);
-                        if text.len() > 50 {
-                            // Limit to 5000 chars to prevent huge entries
-                            return Some(text.chars().take(5000).collect());
-                        }
-                    }
-                }
+        if let Ok(entry) = serde_json::from_str::<serde_json::Value>(line)
+            && entry.get("type").and_then(|t| t.as_str()) == Some("assistant")
+            && let Some(message) = entry.get("message")
+            && let Some(content) = message.get("content")
+        {
+            // Extract text from content (can be array or string)
+            let text = extract_text_from_content(content);
+            if text.len() > 50 {
+                // Limit to 5000 chars to prevent huge entries
+                return Some(text.chars().take(5000).collect());
             }
         }
     }
@@ -267,13 +264,10 @@ fn extract_text_from_content(content: &serde_json::Value) -> String {
             .iter()
             .filter_map(|item| {
                 // Handle {"type": "text", "text": "..."} blocks
-                if let Some(text) = item.get("text").and_then(|t| t.as_str()) {
-                    Some(text.to_string())
-                } else if let Some(s) = item.as_str() {
-                    Some(s.to_string())
-                } else {
-                    None
-                }
+                item.get("text")
+                    .and_then(|t| t.as_str())
+                    .map(|s| s.to_string())
+                    .or_else(|| item.as_str().map(|s| s.to_string()))
             })
             .collect::<Vec<_>>()
             .join("\n"),
@@ -342,7 +336,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::io::Write;
-    use tempfile::{tempdir, NamedTempFile};
+    use tempfile::{NamedTempFile, tempdir};
 
     // =========================================================================
     // CRITICAL: Tests to prevent empty session content regression
@@ -404,9 +398,7 @@ mod tests {
     #[test]
     fn test_response_field_takes_precedence_over_transcript() {
         let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        temp_file
-            .write_all(b"should not be read")
-            .expect("Failed to write");
+        temp_file.write_all(b"should not be read").expect("Failed to write");
 
         let payload = json!({
             "response": "Direct response content here",
@@ -538,8 +530,7 @@ mod tests {
     fn test_short_response_is_skipped() {
         // Responses < 50 chars are skipped (likely incomplete)
         let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        let transcript_content =
-            r#"{"type":"assistant","message":{"content":[{"type":"text","text":"OK"}]}}
+        let transcript_content = r#"{"type":"assistant","message":{"content":[{"type":"text","text":"OK"}]}}
 "#;
         temp_file
             .write_all(transcript_content.as_bytes())
@@ -606,10 +597,7 @@ mod tests {
         // Check that a file was created in learnings/
         let learnings_dir = temp_dir.path().join("learnings");
         if learnings_dir.exists() {
-            let entries: Vec<_> = fs::read_dir(&learnings_dir)
-                .unwrap()
-                .filter_map(|e| e.ok())
-                .collect();
+            let entries: Vec<_> = fs::read_dir(&learnings_dir).unwrap().filter_map(|e| e.ok()).collect();
             // Should have created a dated subdirectory with an entry
             assert!(
                 !entries.is_empty() || learnings_dir.read_dir().unwrap().count() > 0,
@@ -643,9 +631,7 @@ mod tests {
         // Check that a file was created in sessions/
         let sessions_dir = temp_dir.path().join("sessions");
         if sessions_dir.exists() {
-            let has_content = fs::read_dir(&sessions_dir)
-                .map(|d| d.count() > 0)
-                .unwrap_or(false);
+            let has_content = fs::read_dir(&sessions_dir).map(|d| d.count() > 0).unwrap_or(false);
             assert!(has_content, "Should have created session entry");
         }
     }
@@ -691,8 +677,7 @@ mod tests {
         let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
 
         // Content-based categorization (no agent)
-        let (category, agent) =
-            handler.determine_category(None, "debugging the problem and found the root cause");
+        let (category, agent) = handler.determine_category(None, "debugging the problem and found the root cause");
         assert_eq!(category, "learnings");
         assert!(agent.is_none());
     }
@@ -703,8 +688,7 @@ mod tests {
         let handler = HistoryHandler::new(true, temp_dir.path().to_path_buf());
 
         // Agent not found, falls back to content analysis
-        let (category, agent) =
-            handler.determine_category(Some("nonexistent"), "regular session work");
+        let (category, agent) = handler.determine_category(Some("nonexistent"), "regular session work");
         assert_eq!(category, "sessions");
         assert!(agent.is_none());
     }

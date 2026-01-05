@@ -138,6 +138,12 @@ pub enum Commands {
         action: AgentAction,
     },
 
+    /// Manage plugin bundles
+    Bundle {
+        #[command(subcommand)]
+        action: BundleAction,
+    },
+
     /// Run a plugin action directly
     Run {
         /// Plugin name
@@ -252,6 +258,16 @@ pub enum PluginAction {
 
     /// Verify plugin installation
     Verify {
+        /// Plugin name
+        name: String,
+
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// Show plugin installation guide
+    InstallGuide {
         /// Plugin name
         name: String,
     },
@@ -470,6 +486,50 @@ pub enum AgentAction {
     Create {
         /// Agent name
         name: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum BundleAction {
+    /// List available bundles
+    List {
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// Show bundle details
+    Show {
+        /// Bundle name
+        name: String,
+
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+
+    /// Install a bundle
+    Install {
+        /// Bundle name
+        name: String,
+
+        /// Install only required plugins (skip optional)
+        #[arg(long)]
+        required_only: bool,
+
+        /// Skip verification after installation
+        #[arg(long)]
+        skip_verify: bool,
+    },
+
+    /// Create a new bundle
+    New {
+        /// Bundle name
+        name: String,
+
+        /// Output path (default: ~/.config/pais/bundles/<name>)
+        #[arg(long)]
+        path: Option<PathBuf>,
     },
 }
 

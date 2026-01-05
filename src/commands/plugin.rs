@@ -7,6 +7,7 @@ use std::path::Path;
 use crate::cli::{OutputFormat, PluginAction};
 use crate::config::Config;
 use crate::plugin::loader::load_plugin;
+use crate::plugin::verify::{has_checks, print_verification_result, read_verification_guide, verify_plugin};
 
 pub fn run(action: PluginAction, config: &Config) -> Result<()> {
     match action {
@@ -21,7 +22,8 @@ pub fn run(action: PluginAction, config: &Config) -> Result<()> {
             r#type,
             path,
         } => new(&name, &language, &r#type, path.as_ref(), config),
-        PluginAction::Verify { name } => verify(&name, config),
+        PluginAction::Verify { name, format } => verify(&name, OutputFormat::resolve(format), config),
+        PluginAction::InstallGuide { name } => install_guide(&name, config),
     }
 }
 
@@ -662,45 +664,159 @@ MIT
     )
 }
 
-fn verify(name: &str, config: &Config) -> Result<()> {
-    println!("{} Verifying plugin: {}", "→".blue(), name.cyan());
-
+fn verify(name: &str, format: OutputFormat, config: &Config) -> Result<()> {
     let plugin = find_plugin(name, config)?;
+    let spec = &plugin.manifest.verification;
 
-    // Check manifest is valid
-    println!("  {} Manifest valid", "✓".green());
+    // Check if there are any verification checks defined
+    if !has_checks(spec) && spec.guide.is_none() {
+        // Fall back to basic verification
+        return verify_basic(name, &plugin, format);
+    }
+
+    // Run automated verification checks
+    let result = verify_plugin(name, &plugin.path, spec)?;
+
+    match format {
+        OutputFormat::Json => {
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        OutputFormat::Yaml => {
+            println!("{}", serde_yaml::to_string(&result)?);
+        }
+        OutputFormat::Text => {
+            print_verification_result(&result);
+
+            // If there's a guide, mention it
+            if let Some(ref guide) = spec.guide {
+                println!();
+                println!(
+                    "{}",
+                    format!("See also: {} for manual verification steps", guide).dimmed()
+                );
+            }
+        }
+    }
+
+    if !result.passed {
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
+/// Basic verification when no verification spec is defined
+fn verify_basic(name: &str, plugin: &crate::plugin::Plugin, format: OutputFormat) -> Result<()> {
+    let mut checks = Vec::new();
+
+    // Check manifest is valid (already loaded, so this passed)
+    checks.push(crate::plugin::verify::CheckResult {
+        name: "manifest".to_string(),
+        passed: true,
+        message: None,
+    });
 
     // Check entry point exists
-    match plugin.manifest.plugin.language {
+    let entry_point_check = match plugin.manifest.plugin.language {
         crate::plugin::manifest::PluginLanguage::Python => {
             let main_py = plugin.path.join("src").join("main.py");
-            if main_py.exists() {
-                println!("  {} Python entry point found", "✓".green());
-            } else {
-                println!("  {} Python entry point missing: src/main.py", "✗".red());
+            crate::plugin::verify::CheckResult {
+                name: "entry-point".to_string(),
+                passed: main_py.exists(),
+                message: if main_py.exists() {
+                    Some("src/main.py".to_string())
+                } else {
+                    Some("src/main.py not found".to_string())
+                },
             }
         }
         crate::plugin::manifest::PluginLanguage::Rust => {
             let cargo_toml = plugin.path.join("Cargo.toml");
-            if cargo_toml.exists() {
-                println!("  {} Rust project found", "✓".green());
-            } else {
-                println!("  {} Cargo.toml missing", "✗".red());
+            crate::plugin::verify::CheckResult {
+                name: "entry-point".to_string(),
+                passed: cargo_toml.exists(),
+                message: if cargo_toml.exists() {
+                    Some("Cargo.toml".to_string())
+                } else {
+                    Some("Cargo.toml not found".to_string())
+                },
             }
         }
-        crate::plugin::manifest::PluginLanguage::Mixed => {
-            println!("  {} Mixed language plugin", "ℹ".blue());
+        crate::plugin::manifest::PluginLanguage::Mixed => crate::plugin::verify::CheckResult {
+            name: "entry-point".to_string(),
+            passed: true,
+            message: Some("Mixed language".to_string()),
+        },
+    };
+    checks.push(entry_point_check);
+
+    // Check for SKILL.md
+    let skill_md = plugin.path.join("SKILL.md");
+    if skill_md.exists() {
+        checks.push(crate::plugin::verify::CheckResult {
+            name: "skill".to_string(),
+            passed: true,
+            message: Some("SKILL.md".to_string()),
+        });
+    }
+
+    let passed_count = checks.iter().filter(|c| c.passed).count();
+    let all_passed = passed_count == checks.len();
+
+    let result = crate::plugin::verify::VerificationResult {
+        plugin_name: name.to_string(),
+        passed: all_passed,
+        checks,
+        summary: format!("{}/{} checks passed", passed_count, passed_count),
+    };
+
+    match format {
+        OutputFormat::Json => {
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        OutputFormat::Yaml => {
+            println!("{}", serde_yaml::to_string(&result)?);
+        }
+        OutputFormat::Text => {
+            print_verification_result(&result);
+            println!();
+            println!(
+                "{}",
+                "Note: No verification spec defined. Add 'verification:' to plugin.yaml for custom checks.".dimmed()
+            );
         }
     }
 
-    // Check for SKILL.md if it's a skill
-    let skill_md = plugin.path.join("SKILL.md");
-    if skill_md.exists() {
-        println!("  {} SKILL.md found", "✓".green());
+    Ok(())
+}
+
+fn install_guide(name: &str, config: &Config) -> Result<()> {
+    let plugin = find_plugin(name, config)?;
+
+    // Check for install-guide in plugin info
+    if let Some(ref guide_path) = plugin.manifest.plugin.install_guide {
+        let content = read_verification_guide(&plugin.path, guide_path)?;
+        println!("{}", content);
+        return Ok(());
     }
 
+    // Check for install.md in plugin directory
+    let install_md = plugin.path.join("install.md");
+    if install_md.exists() {
+        let content = std::fs::read_to_string(&install_md)?;
+        println!("{}", content);
+        return Ok(());
+    }
+
+    // No install guide found
+    println!("{} No installation guide found for plugin '{}'", "!".yellow(), name);
     println!();
-    println!("  {} Plugin verification complete", "✓".green());
+    println!("To add an installation guide:");
+    println!("  1. Create an {} file in the plugin directory", "install.md".cyan());
+    println!(
+        "  2. Optionally add {} to plugin.yaml",
+        "install-guide: install.md".cyan()
+    );
 
     Ok(())
 }

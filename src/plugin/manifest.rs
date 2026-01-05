@@ -28,6 +28,55 @@ pub struct PluginManifest {
 
     #[serde(default)]
     pub build: BuildSpec,
+
+    #[serde(default)]
+    pub verification: VerificationSpec,
+}
+
+/// Verification specification for plugin installation
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct VerificationSpec {
+    /// Path to human-readable verification guide (e.g., "verify.md")
+    #[serde(default)]
+    pub guide: Option<String>,
+
+    /// Automated verification checks
+    #[serde(default)]
+    pub checks: VerificationChecks,
+}
+
+/// Automated verification checks
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct VerificationChecks {
+    /// Files that must exist (relative to plugin directory)
+    #[serde(default)]
+    pub files: Vec<String>,
+
+    /// Commands to run for verification
+    #[serde(default)]
+    pub commands: Vec<VerificationCommand>,
+
+    /// Environment variables that must be set
+    #[serde(default, rename = "env-vars")]
+    pub env_vars: Vec<String>,
+}
+
+/// A verification command to run
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct VerificationCommand {
+    /// Name of the check
+    pub name: String,
+
+    /// Command to execute
+    pub command: String,
+
+    /// Expected exit code (default: 0)
+    #[serde(default, rename = "expect-exit")]
+    pub expect_exit: Option<i32>,
+
+    /// String that must appear in output
+    #[serde(default, rename = "expect-contains")]
+    pub expect_contains: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -48,6 +97,10 @@ pub struct PluginInfo {
 
     #[serde(default)]
     pub keywords: Vec<String>,
+
+    /// Path to install guide (e.g., "install.md")
+    #[serde(default, rename = "install-guide")]
+    pub install_guide: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]

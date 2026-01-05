@@ -142,14 +142,14 @@ $ grep -r "transcript_path" src/
 
 ### Priority 1: Read `transcript_path` from Stop Hook
 
-**The simplest fix:** Claude Code already provides `transcript_path` in Stop events. 
+**The simplest fix:** Claude Code already provides `transcript_path` in Stop events.
 
 Add to `src/hook/history.rs`:
 
 ```rust
 fn extract_response_from_transcript(transcript_path: &str) -> Option<String> {
     let content = std::fs::read_to_string(transcript_path).ok()?;
-    
+
     // Parse JSONL backwards to find last assistant message
     for line in content.lines().rev() {
         if let Ok(entry) = serde_json::from_str::<serde_json::Value>(line) {
