@@ -40,7 +40,15 @@ fn execute_python(plugin_path: &std::path::Path, action: &str, args: &[String]) 
         eyre::bail!("Python main not found: {}", main_py.display());
     }
 
-    let mut cmd = Command::new("python3");
+    // Use plugin's venv Python if it exists, otherwise fall back to system python3
+    let venv_python = plugin_path.join(".venv").join("bin").join("python");
+    let python_cmd = if venv_python.exists() {
+        venv_python
+    } else {
+        std::path::PathBuf::from("python3")
+    };
+
+    let mut cmd = Command::new(&python_cmd);
     cmd.arg(&main_py).arg(action);
 
     for arg in args {
