@@ -1,8 +1,8 @@
 use colored::*;
 use eyre::{Context, Result};
 use mermaid_rs::{
-    Diagram, ERDiagram, FlowChart, FromConfig, Journey, MermaidClient, Mindmap, PieChart,
-    RenderOptions, SequenceDiagram, StateDiagram,
+    Diagram, ERDiagram, FlowChart, FromConfig, Journey, MermaidClient, Mindmap, PieChart, RenderOptions,
+    SequenceDiagram, StateDiagram,
 };
 use std::fs;
 use std::io::{self, Read, Write as IoWrite};
@@ -76,7 +76,14 @@ pub fn run(action: DiagramAction, _config: &Config) -> Result<()> {
             format,
             output,
             server,
-        } => pie(title.as_deref(), show_data, config.as_ref(), &format, output.as_ref(), &server),
+        } => pie(
+            title.as_deref(),
+            show_data,
+            config.as_ref(),
+            &format,
+            output.as_ref(),
+            &server,
+        ),
         DiagramAction::Journey {
             title,
             config,
@@ -128,10 +135,10 @@ fn render(args: RenderArgs) -> Result<()> {
         _ => eyre::bail!("Unsupported format: {}. Use svg, png, or mermaid.", format),
     }
 
-    if args.open {
-        if let Some(path) = &args.output {
-            open_file(path)?;
-        }
+    if args.open
+        && let Some(path) = &args.output
+    {
+        open_file(path)?;
     }
 
     Ok(())
@@ -147,7 +154,9 @@ fn get_script(file: Option<&PathBuf>, mermaid: Option<&str>) -> Result<String> {
     }
 
     let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer).context("Failed to read from stdin")?;
+    io::stdin()
+        .read_to_string(&mut buffer)
+        .context("Failed to read from stdin")?;
 
     if buffer.trim().is_empty() {
         eyre::bail!("No input provided. Use --mermaid, provide a file, or pipe to stdin.");
@@ -218,7 +227,9 @@ fn copy_to_clipboard(content: &str) -> Result<()> {
                 .context("Failed to spawn clipboard command")?;
 
             if let Some(stdin) = child.stdin.as_mut() {
-                stdin.write_all(content.as_bytes()).context("Failed to write to clipboard")?;
+                stdin
+                    .write_all(content.as_bytes())
+                    .context("Failed to write to clipboard")?;
             }
 
             child.wait().context("Clipboard command failed")?;
@@ -239,10 +250,7 @@ fn open_file(path: &PathBuf) -> Result<()> {
     #[cfg(target_os = "windows")]
     let cmd = "start";
 
-    Command::new(cmd)
-        .arg(path)
-        .spawn()
-        .context("Failed to open file")?;
+    Command::new(cmd).arg(path).spawn().context("Failed to open file")?;
 
     Ok(())
 }
@@ -278,7 +286,9 @@ fn read_config_or_stdin(config: Option<&PathBuf>) -> Result<String> {
         fs::read_to_string(path).context("Failed to read config file")?
     } else {
         let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer).context("Failed to read from stdin")?;
+        io::stdin()
+            .read_to_string(&mut buffer)
+            .context("Failed to read from stdin")?;
         buffer
     };
 
@@ -315,7 +325,9 @@ fn flowchart(
         );
 
         let mut content = String::new();
-        io::stdin().read_to_string(&mut content).context("Failed to read from stdin")?;
+        io::stdin()
+            .read_to_string(&mut content)
+            .context("Failed to read from stdin")?;
 
         if content.trim().is_empty() {
             eyre::bail!("No config provided. Use --config or pipe YAML to stdin.");
@@ -451,7 +463,10 @@ fn list_types(format: OutputFormat) -> Result<()> {
                     dtype["name"].as_str().unwrap().green(),
                     dtype["description"].as_str().unwrap()
                 );
-                println!("    Command: pais diagram {}", dtype["subcommand"].as_str().unwrap().yellow());
+                println!(
+                    "    Command: pais diagram {}",
+                    dtype["subcommand"].as_str().unwrap().yellow()
+                );
                 println!();
             }
             println!("{}", "Render any .mmd file:".dimmed());
