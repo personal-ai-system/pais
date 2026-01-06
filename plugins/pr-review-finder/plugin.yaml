@@ -1,0 +1,38 @@
+plugin:
+  name: pr-review-finder
+  version: 0.1.0
+  description: Find PR review requests in Slack channels - identifies the "begging for reviews" smell
+  authors:
+    - Scott Idler <scott.a.idler@gmail.com>
+  language: python
+  license: MIT
+  keywords:
+    - slack
+    - pr-reviews
+    - code-review
+    - process-smell
+    - github
+
+pais:
+  core_version: ">=0.1.0"
+
+config:
+  github-repo-pattern:
+    type: string
+    required: false
+    default: "github.com/tatari-tv/.*/pull/"
+
+  lookback-days:
+    type: integer
+    required: false
+    default: 30
+
+hooks:
+  PreToolUse: []
+  PostToolUse: []
+  Stop: []
+  SessionStart: []
+  SessionEnd: []
+
+build:
+  type: uv

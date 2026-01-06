@@ -1,0 +1,34 @@
+# Slack channels to search for PR review requests
+# Format: channel_id: channel_name
+#
+# To add a channel, find the ID in Slack:
+#   Right-click channel > View channel details > scroll to bottom
+#
+# Or search in Slack and hover over channel name for the ID
+
+channels:
+  # Core engineering channels
+  C0L0DJU56: engineering
+  CEC608J84: fe-engineers
+  CBC5M4ZQW: sre
+  C1CGK1M0U: data-science
+  C0195L0G667: data-platform
+
+  # BAO team channels
+  CPLP7F7UJ: eng-bao
+  C03H1BHGDFW: eng-bao-campaign-execution
+
+  # Measurement & reporting
+  CV5G2HLPN: measurement
+  C02HS049PH6: measurement-pr-reviews
+  C0461M137KK: eng-reporting
+
+  # Intelligence
+  C02190WJF3Q: media-intelligence-team
+
+  # Oncall channels
+  C04ETKQG7GX: ram-oncall
+  C07U7SD5ZDY: eng-on-call
+
+  # Philo team
+  C09T29XJ3FS: eng-philo-devs

@@ -1,0 +1,15 @@
+[project]
+name = "pr-review-finder"
+version = "0.1.0"
+description = "Find PR review requests in Slack channels"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+pr-review-finder = "src.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
