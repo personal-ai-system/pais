@@ -5,6 +5,7 @@ use colored::*;
 use eyre::Result;
 use serde::Serialize;
 use std::fs;
+use terminal_size::{Width, terminal_size};
 
 use crate::cli::{OutputFormat, SecurityAction as CliSecurityAction};
 use crate::config::Config;
@@ -18,26 +19,108 @@ pub fn run(action: CliSecurityAction, config: &Config) -> Result<()> {
     }
 }
 
+/// Get terminal width, defaulting to 80 if not available
+fn get_terminal_width() -> usize {
+    terminal_size().map(|(Width(w), _)| w as usize).unwrap_or(80)
+}
+
+/// Wrap text to max_width, returning lines
+fn wrap_text(s: &str, max_width: usize) -> Vec<String> {
+    if max_width == 0 {
+        return vec![s.to_string()];
+    }
+
+    let mut lines = Vec::new();
+    let mut current_line = String::new();
+    let mut current_len = 0;
+
+    for word in s.split_whitespace() {
+        let word_len = word.chars().count();
+
+        if current_len == 0 {
+            current_line = word.to_string();
+            current_len = word_len;
+        } else if current_len + 1 + word_len <= max_width {
+            current_line.push(' ');
+            current_line.push_str(word);
+            current_len += 1 + word_len;
+        } else {
+            lines.push(current_line);
+            current_line = word.to_string();
+            current_len = word_len;
+        }
+    }
+
+    if !current_line.is_empty() {
+        lines.push(current_line);
+    }
+
+    if lines.is_empty() {
+        lines.push(String::new());
+    }
+
+    lines
+}
+
 /// Show security tiers
 fn show_tiers(format: OutputFormat) -> Result<()> {
     let tiers = get_security_summary();
 
     match format {
         OutputFormat::Text => {
-            println!("{}", "Security Tiers:".bold());
-            println!();
-            println!("  {:4} {:30} {:8}", "Tier", "Description", "Action");
-            println!("  {:4} {:30} {:8}", "----", "------------------------------", "------");
+            if tiers.is_empty() {
+                println!("{}", "No security tiers defined".dimmed());
+                return Ok(());
+            }
 
+            let term_width = get_terminal_width();
+
+            // Calculate column widths
+            let tier_width = 4; // "Tier" or max 2 digits
+            let action_width = tiers.iter().map(|(_, _, a)| a.len()).max().unwrap_or(6);
+
+            // Description gets remaining space (minus columns and gaps)
+            let fixed_width = tier_width + 2 + action_width + 2;
+            let desc_width = term_width.saturating_sub(fixed_width).max(20);
+
+            // Header
+            println!(
+                "{:<tier_width$}  {:<action_width$}  {}",
+                "TIER".bold(),
+                "ACTION".bold(),
+                "DESCRIPTION".bold(),
+                tier_width = tier_width,
+                action_width = action_width,
+            );
+
+            // Tiers
+            let indent = " ".repeat(fixed_width);
             for (tier, desc, action) in &tiers {
+                let desc_lines = wrap_text(desc, desc_width);
                 let action_colored = match *action {
                     "Block" => action.red(),
                     "Warn" => action.yellow(),
                     "Log" => action.dimmed(),
                     _ => action.normal(),
                 };
-                println!("  {:4} {:30} {}", tier, desc, action_colored);
+
+                // First line with tier and action
+                println!(
+                    "{:<tier_width$}  {:<action_width$}  {}",
+                    tier.to_string().cyan(),
+                    action_colored,
+                    desc_lines.first().unwrap_or(&String::new()).dimmed(),
+                    tier_width = tier_width,
+                    action_width = action_width,
+                );
+                // Continuation lines indented under description
+                for line in desc_lines.iter().skip(1) {
+                    println!("{}{}", indent, line.dimmed());
+                }
             }
+
+            println!();
+            println!("{}", format!("{} tiers", tiers.len()).dimmed());
         }
         OutputFormat::Json => {
             #[derive(Serialize)]

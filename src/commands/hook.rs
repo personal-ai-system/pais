@@ -142,16 +142,162 @@ fn dispatch(event: &str, payload: Option<&str>, config: &Config) -> Result<()> {
     std::process::exit(0);
 }
 
-fn list(event_filter: Option<&str>, _config: &Config) -> Result<()> {
-    println!("{}", "Registered hook handlers:".bold());
+/// Information about a built-in hook handler
+struct HandlerInfo {
+    name: &'static str,
+    description: &'static str,
+    events: &'static [&'static str],
+    enabled: bool,
+}
+
+fn list(event_filter: Option<&str>, config: &Config) -> Result<()> {
+    println!("{}", "Hook Handlers".bold());
     println!();
 
-    if let Some(event) = event_filter {
-        println!("  Filtering by event: {}", event.cyan());
+    // Parse event filter if provided
+    let filter_event = event_filter.and_then(HookEvent::from_str);
+    if let Some(filter_str) = event_filter
+        && filter_event.is_none()
+    {
+        println!(
+            "  {} Unknown event '{}', showing all handlers",
+            "⚠".yellow(),
+            filter_str
+        );
+        println!();
     }
 
-    // TODO: Implement handler listing
-    println!("  {} Hook handler listing not yet implemented", "⚠".yellow());
+    // Built-in handlers
+    let handlers = vec![
+        HandlerInfo {
+            name: "security",
+            description: "Blocks dangerous commands before execution",
+            events: &["PreToolUse"],
+            enabled: config.hooks.security_enabled,
+        },
+        HandlerInfo {
+            name: "history",
+            description: "Captures session lifecycle events",
+            events: &["SessionStart", "Stop", "SubagentStop", "SessionEnd"],
+            enabled: config.hooks.history_enabled,
+        },
+        HandlerInfo {
+            name: "ui",
+            description: "Updates terminal tab title",
+            events: &["UserPromptSubmit"],
+            enabled: config.hooks.ui_enabled,
+        },
+        HandlerInfo {
+            name: "research",
+            description: "Validates research directory path structure",
+            events: &["PreToolUse"],
+            enabled: config.hooks.research_enabled,
+        },
+    ];
+
+    // Filter handlers if event specified
+    let filtered_handlers: Vec<_> = handlers
+        .into_iter()
+        .filter(|h| {
+            filter_event
+                .map(|e| h.events.contains(&e.to_string().as_str()))
+                .unwrap_or(true)
+        })
+        .collect();
+
+    // Print built-in handlers
+    println!("  {}", "Built-in Handlers".cyan().bold());
+    println!();
+
+    if filtered_handlers.is_empty() {
+        println!("    (none match filter)");
+    } else {
+        for handler in &filtered_handlers {
+            let status = if handler.enabled { "●".green() } else { "○".bright_black() };
+            let state = if handler.enabled { "enabled".green() } else { "disabled".bright_black() };
+
+            println!("    {} {} ({})", status, handler.name.bold(), state);
+            println!("      {}", handler.description.bright_black());
+            println!("      Events: {}", handler.events.join(", ").cyan());
+            println!();
+        }
+    }
+
+    // Plugin handlers
+    let plugins_dir = Config::expand_path(&config.paths.plugins);
+    let mut plugin_manager = PluginManager::new(plugins_dir);
+
+    println!("  {}", "Plugin Handlers".cyan().bold());
+    println!();
+
+    if plugin_manager.discover().is_ok() {
+        let plugins_with_hooks: Vec<_> = plugin_manager
+            .list()
+            .filter(|p| p.manifest.hooks.has_hooks())
+            .filter(|p| {
+                filter_event
+                    .map(|e| !p.manifest.hooks.scripts_for_event(&e.to_string()).is_empty())
+                    .unwrap_or(true)
+            })
+            .collect();
+
+        if plugins_with_hooks.is_empty() {
+            println!("    (no plugins with hooks)");
+        } else {
+            for plugin in plugins_with_hooks {
+                println!(
+                    "    {} {} v{}",
+                    "●".green(),
+                    plugin.manifest.plugin.name.bold(),
+                    plugin.manifest.plugin.version
+                );
+                println!("      {}", plugin.manifest.plugin.description.bright_black());
+
+                // List events this plugin handles
+                let mut events = Vec::new();
+                if !plugin.manifest.hooks.pre_tool_use.is_empty() {
+                    events.push("PreToolUse");
+                }
+                if !plugin.manifest.hooks.post_tool_use.is_empty() {
+                    events.push("PostToolUse");
+                }
+                if !plugin.manifest.hooks.stop.is_empty() {
+                    events.push("Stop");
+                }
+                if !plugin.manifest.hooks.session_start.is_empty() {
+                    events.push("SessionStart");
+                }
+                if !plugin.manifest.hooks.session_end.is_empty() {
+                    events.push("SessionEnd");
+                }
+                if !plugin.manifest.hooks.subagent_stop.is_empty() {
+                    events.push("SubagentStop");
+                }
+
+                println!("      Events: {}", events.join(", ").cyan());
+                println!();
+            }
+        }
+    } else {
+        println!("    (plugins directory not found)");
+    }
+
+    // Show available events for reference
+    if filter_event.is_none() {
+        println!("  {}", "Available Events".cyan().bold());
+        println!();
+        println!("    PreToolUse      Before a tool runs (can block)");
+        println!("    PostToolUse     After a tool completes");
+        println!("    SessionStart    When a session begins");
+        println!("    Stop            When main session stops");
+        println!("    SubagentStop    When a subagent stops");
+        println!("    SessionEnd      When session fully ends");
+        println!("    UserPromptSubmit When user submits a prompt");
+        println!("    Notification    When a notification is sent");
+        println!("    PermissionRequest When permission is requested");
+        println!("    PreCompact      Before context compaction");
+        println!();
+    }
 
     Ok(())
 }
