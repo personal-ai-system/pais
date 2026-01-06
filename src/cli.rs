@@ -150,6 +150,12 @@ pub enum Commands {
         action: ImageAction,
     },
 
+    /// Generate diagrams using Mermaid
+    Diagram {
+        #[command(subcommand)]
+        action: DiagramAction,
+    },
+
     /// Run a plugin action directly
     Run {
         /// Plugin name
@@ -636,6 +642,212 @@ pub enum ImageAction {
 
     /// List available AI models
     Models {
+        /// Output format (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum DiagramAction {
+    /// Render a Mermaid diagram from file or stdin
+    Render {
+        /// Path to .mmd file (reads from stdin if omitted)
+        #[arg()]
+        file: Option<PathBuf>,
+
+        /// Raw mermaid string to render
+        #[arg(short, long)]
+        mermaid: Option<String>,
+
+        /// Output format (svg, png)
+        #[arg(long, short = 'f', default_value = "svg")]
+        format: String,
+
+        /// Output file path (prints to stdout if omitted)
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Image width
+        #[arg(long)]
+        width: Option<u32>,
+
+        /// Image height
+        #[arg(long)]
+        height: Option<u32>,
+
+        /// Scale factor
+        #[arg(long)]
+        scale: Option<f32>,
+
+        /// Background color
+        #[arg(long)]
+        background: Option<String>,
+
+        /// Mermaid.ink server URL
+        #[arg(long, default_value = "https://mermaid.ink")]
+        server: String,
+
+        /// Copy output to clipboard
+        #[arg(long)]
+        clipboard: bool,
+
+        /// Open result in browser/viewer
+        #[arg(long)]
+        open: bool,
+    },
+
+    /// Generate a flowchart diagram
+    Flowchart {
+        /// Direction: TB (top-bottom), BT, LR, RL
+        #[arg(long, short = 'd', default_value = "TB")]
+        direction: String,
+
+        /// YAML config file for diagram definition
+        #[arg(long, short = 'c')]
+        config: Option<PathBuf>,
+
+        /// Output format (svg, png, mermaid)
+        #[arg(long, short = 'f', default_value = "svg")]
+        format: String,
+
+        /// Output file path
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Mermaid.ink server URL
+        #[arg(long, default_value = "https://mermaid.ink")]
+        server: String,
+    },
+
+    /// Generate a sequence diagram
+    Sequence {
+        /// YAML config file for diagram definition
+        #[arg(long, short = 'c')]
+        config: Option<PathBuf>,
+
+        /// Output format (svg, png, mermaid)
+        #[arg(long, short = 'f', default_value = "svg")]
+        format: String,
+
+        /// Output file path
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Mermaid.ink server URL
+        #[arg(long, default_value = "https://mermaid.ink")]
+        server: String,
+    },
+
+    /// Generate an ER (entity-relationship) diagram
+    Er {
+        /// YAML config file for diagram definition
+        #[arg(long, short = 'c')]
+        config: Option<PathBuf>,
+
+        /// Output format (svg, png, mermaid)
+        #[arg(long, short = 'f', default_value = "svg")]
+        format: String,
+
+        /// Output file path
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Mermaid.ink server URL
+        #[arg(long, default_value = "https://mermaid.ink")]
+        server: String,
+    },
+
+    /// Generate a state diagram
+    State {
+        /// YAML config file for diagram definition
+        #[arg(long, short = 'c')]
+        config: Option<PathBuf>,
+
+        /// Output format (svg, png, mermaid)
+        #[arg(long, short = 'f', default_value = "svg")]
+        format: String,
+
+        /// Output file path
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Mermaid.ink server URL
+        #[arg(long, default_value = "https://mermaid.ink")]
+        server: String,
+    },
+
+    /// Generate a mindmap diagram
+    Mindmap {
+        /// YAML config file for diagram definition
+        #[arg(long, short = 'c')]
+        config: Option<PathBuf>,
+
+        /// Output format (svg, png, mermaid)
+        #[arg(long, short = 'f', default_value = "svg")]
+        format: String,
+
+        /// Output file path
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Mermaid.ink server URL
+        #[arg(long, default_value = "https://mermaid.ink")]
+        server: String,
+    },
+
+    /// Generate a pie chart
+    Pie {
+        /// Chart title
+        #[arg(long, short = 't')]
+        title: Option<String>,
+
+        /// Show legend
+        #[arg(long)]
+        show_data: bool,
+
+        /// YAML config file for data
+        #[arg(long, short = 'c')]
+        config: Option<PathBuf>,
+
+        /// Output format (svg, png, mermaid)
+        #[arg(long, short = 'f', default_value = "svg")]
+        format: String,
+
+        /// Output file path
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Mermaid.ink server URL
+        #[arg(long, default_value = "https://mermaid.ink")]
+        server: String,
+    },
+
+    /// Generate a user journey diagram
+    Journey {
+        /// Journey title
+        #[arg(long, short = 't')]
+        title: Option<String>,
+
+        /// YAML config file for diagram definition
+        #[arg(long, short = 'c')]
+        config: Option<PathBuf>,
+
+        /// Output format (svg, png, mermaid)
+        #[arg(long, short = 'f', default_value = "svg")]
+        format: String,
+
+        /// Output file path
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
+
+        /// Mermaid.ink server URL
+        #[arg(long, default_value = "https://mermaid.ink")]
+        server: String,
+    },
+
+    /// List available diagram types
+    Types {
         /// Output format (default: text for TTY, json for pipes)
         #[arg(long, short = 'o', value_enum)]
         format: Option<OutputFormat>,
