@@ -1,10 +1,12 @@
 //! Skill management commands
 
+use colored::*;
 use eyre::{Context, Result};
 use serde::Serialize;
 use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
+use terminal_size::{Width, terminal_size};
 
 use std::path::PathBuf;
 
@@ -72,6 +74,58 @@ impl From<&Skill> for SkillInfo {
     }
 }
 
+/// Get terminal width, defaulting to 80 if not available
+fn get_terminal_width() -> usize {
+    terminal_size().map(|(Width(w), _)| w as usize).unwrap_or(80)
+}
+
+/// Wrap text to max_width, returning lines
+fn wrap_text(s: &str, max_width: usize) -> Vec<String> {
+    if max_width == 0 {
+        return vec![s.to_string()];
+    }
+
+    let mut lines = Vec::new();
+    let mut current_line = String::new();
+    let mut current_len = 0;
+
+    for word in s.split_whitespace() {
+        let word_len = word.chars().count();
+
+        if current_len == 0 {
+            current_line = word.to_string();
+            current_len = word_len;
+        } else if current_len + 1 + word_len <= max_width {
+            current_line.push(' ');
+            current_line.push_str(word);
+            current_len += 1 + word_len;
+        } else {
+            lines.push(current_line);
+            current_line = word.to_string();
+            current_len = word_len;
+        }
+    }
+
+    if !current_line.is_empty() {
+        lines.push(current_line);
+    }
+
+    if lines.is_empty() {
+        lines.push(String::new());
+    }
+
+    lines
+}
+
+/// Format source type for display
+fn format_source(skill: &Skill) -> String {
+    match &skill.source {
+        SkillSource::Simple => "simple".to_string(),
+        SkillSource::Plugin(name) => format!("plugin:{}", name),
+        SkillSource::Discovered(_) => "discovered".to_string(),
+    }
+}
+
 /// List all skills
 fn list_skills(format: OutputFormat, only_simple: bool, only_plugin: bool, config: &Config) -> Result<()> {
     let skills_dir = Config::expand_path(&config.paths.skills);
@@ -94,47 +148,53 @@ fn list_skills(format: OutputFormat, only_simple: bool, only_plugin: bool, confi
     match format {
         OutputFormat::Text => {
             if all_skills.is_empty() {
-                println!("No skills found.");
-                println!();
-                println!("To create a skill:");
-                println!("  pais skill add <name>");
+                println!("{}", "No skills installed".dimmed());
                 return Ok(());
             }
 
-            // Group by source type
-            let simple: Vec<_> = all_skills.iter().filter(|s| s.is_simple()).collect();
-            let plugin: Vec<_> = all_skills.iter().filter(|s| s.is_plugin_skill()).collect();
-            let discovered: Vec<_> = all_skills.iter().filter(|s| s.is_discovered()).collect();
+            let term_width = get_terminal_width();
 
-            if !simple.is_empty() {
-                println!("Simple Skills (SKILL.md only):");
-                for skill in &simple {
-                    println!("  {} - {}", skill.name, skill.description);
+            // Calculate column widths
+            let name_width = all_skills.iter().map(|s| s.name.len()).max().unwrap_or(4);
+            let source_width = all_skills.iter().map(|s| format_source(s).len()).max().unwrap_or(6);
+
+            // Description gets remaining space (minus columns and gaps)
+            let fixed_width = name_width + 2 + source_width + 2;
+            let desc_width = term_width.saturating_sub(fixed_width).max(20);
+
+            // Header
+            println!(
+                "{:<name_width$}  {:<source_width$}  {}",
+                "NAME".bold(),
+                "SOURCE".bold(),
+                "DESCRIPTION".bold(),
+                name_width = name_width,
+                source_width = source_width,
+            );
+
+            // Skills
+            let indent = " ".repeat(fixed_width);
+            for skill in &all_skills {
+                let desc_lines = wrap_text(&skill.description, desc_width);
+                let source = format_source(skill);
+
+                // First line with name and source
+                println!(
+                    "{:<name_width$}  {:<source_width$}  {}",
+                    skill.name.green(),
+                    source.dimmed(),
+                    desc_lines.first().unwrap_or(&String::new()).dimmed(),
+                    name_width = name_width,
+                    source_width = source_width,
+                );
+                // Continuation lines indented under description
+                for line in desc_lines.iter().skip(1) {
+                    println!("{}{}", indent, line.dimmed());
                 }
-                println!();
             }
 
-            if !plugin.is_empty() {
-                println!("Plugin Skills:");
-                for skill in &plugin {
-                    if let SkillSource::Plugin(plugin_name) = &skill.source {
-                        println!("  {} - {} (plugin: {})", skill.name, skill.description, plugin_name);
-                    }
-                }
-                println!();
-            }
-
-            if !discovered.is_empty() {
-                println!("Discovered Skills:");
-                for skill in &discovered {
-                    if let SkillSource::Discovered(repo_path) = &skill.source {
-                        println!("  {} - {} ({})", skill.name, skill.description, repo_path.display());
-                    }
-                }
-                println!();
-            }
-
-            println!("Total: {} skill(s)", all_skills.len());
+            println!();
+            println!("{}", format!("{} skills", all_skills.len()).dimmed());
         }
         OutputFormat::Json => {
             let infos: Vec<SkillInfo> = all_skills.iter().map(SkillInfo::from).collect();
