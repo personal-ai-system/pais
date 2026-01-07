@@ -1,25 +1,31 @@
-//! Session command - Launch Claude Code with dynamic MCP configuration
+//! Session command - Launch Claude Code with dynamic MCP and skill configuration
 //!
 //! This module provides `pais session` which wraps Claude Code startup,
-//! allowing selective MCP server loading to reduce context token usage.
+//! allowing selective MCP server and skill loading to reduce context token usage.
 //!
 //! ## Usage
 //!
 //! ```bash
-//! # Launch with specific MCPs
-//! pais session --mcp github,slack
+//! # Launch with specific MCPs (names or profiles)
+//! pais session -m github -m slack
+//! pais session -m work  # expands profile
 //!
-//! # Use a named profile
-//! pais session --profile minimal
+//! # Launch with specific skills (names or profiles)
+//! pais session -s rust-coder -s otto
+//! pais session -s dev  # expands profile
 //!
-//! # List available MCPs and profiles
+//! # Combined
+//! pais session -m work -s dev
+//!
+//! # List available MCPs, skills, and profiles
 //! pais session --list
 //! ```
 
 use colored::Colorize;
 use eyre::{Context, Result, eyre};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
@@ -27,6 +33,7 @@ use std::process::Command;
 
 use crate::cli::OutputFormat;
 use crate::config::{Config, McpServerConfig};
+use crate::skill::indexer::generate_index;
 
 /// MCP server definition as stored in ~/.mcp.json or similar
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -43,10 +50,18 @@ struct McpServerInfo {
     source: String,
 }
 
+/// Information about an available skill
+#[derive(Debug, Clone, Serialize)]
+struct SkillInfo {
+    name: String,
+    description: String,
+    tier: String,
+}
+
 /// Run the session command
 pub fn run(
     mcp: Option<Vec<String>>,
-    profile: Option<String>,
+    skill: Option<Vec<String>>,
     list: bool,
     dry_run: bool,
     format: Option<OutputFormat>,
@@ -54,11 +69,14 @@ pub fn run(
     config: &Config,
 ) -> Result<()> {
     if list {
-        return list_mcps(OutputFormat::resolve(format), config);
+        return list_all(OutputFormat::resolve(format), config);
     }
 
-    // Determine which MCPs to load
-    let mcp_list = resolve_mcp_list(mcp, profile, config)?;
+    // Resolve which MCPs to load (expand profiles, apply defaults)
+    let mcp_list = resolve_list(mcp, &config.mcp.profiles);
+
+    // Resolve which skills to load (expand profiles, apply defaults)
+    let skill_list = resolve_list(skill, &config.skills.profiles);
 
     // Build the MCP config JSON
     let (temp_path, server_count) = if mcp_list.is_empty() {
@@ -74,49 +92,63 @@ pub fn run(
             "  MCPs: {}",
             if mcp_list.is_empty() { "none".to_string() } else { mcp_list.join(", ") }
         );
-        println!("  Servers found: {}", server_count);
+        println!("  MCP servers found: {}", server_count);
+        println!(
+            "  Skills: {}",
+            if skill_list.is_empty() {
+                "all (no filter)".to_string()
+            } else {
+                skill_list.join(", ")
+            }
+        );
         if let Some(ref path) = temp_path {
-            println!("  Config file: {}", path.display());
+            println!("  MCP config file: {}", path.display());
             if let Ok(content) = fs::read_to_string(path) {
-                println!("\n{}", "Generated config:".dimmed());
+                println!("\n{}", "Generated MCP config:".dimmed());
                 println!("{}", content);
             }
+        }
+        if !skill_list.is_empty() {
+            println!("  PAIS_SKILLS: {}", skill_list.join(","));
         }
         println!("  Extra args: {:?}", claude_args);
         return Ok(());
     }
 
     // Build and exec claude command
-    launch_claude(temp_path, claude_args)
+    launch_claude(temp_path, skill_list, claude_args)
 }
 
-/// Resolve which MCPs to load based on flags and config
-fn resolve_mcp_list(mcp: Option<Vec<String>>, profile: Option<String>, config: &Config) -> Result<Vec<String>> {
-    // Explicit --mcp flag takes precedence
-    if let Some(mcps) = mcp {
-        return Ok(mcps);
+/// Expand a list of names, replacing profile names with their contents
+/// If input is None, returns the first profile's contents as default
+fn resolve_list(input: Option<Vec<String>>, profiles: &IndexMap<String, Vec<String>>) -> Vec<String> {
+    match input {
+        Some(names) => expand_names(&names, profiles),
+        None => get_default(profiles),
     }
+}
 
-    // Then check for --profile
-    if let Some(profile_name) = profile {
-        return config.mcp.profiles.get(&profile_name).cloned().ok_or_else(|| {
-            eyre!(
-                "Unknown profile '{}'. Use --list to see available profiles.",
-                profile_name
-            )
-        });
+/// Expand names, replacing profile names with their contents
+fn expand_names(names: &[String], profiles: &IndexMap<String, Vec<String>>) -> Vec<String> {
+    let mut result = Vec::new();
+    for name in names {
+        if let Some(profile_contents) = profiles.get(name) {
+            // It's a profile - expand it
+            result.extend(profile_contents.iter().cloned());
+        } else {
+            // It's a direct name
+            result.push(name.clone());
+        }
     }
+    // Deduplicate while preserving order
+    let mut seen = HashSet::new();
+    result.retain(|x| seen.insert(x.clone()));
+    result
+}
 
-    // Then check for default profile
-    if let Some(ref default_name) = config.mcp.default_profile
-        && let Some(mcps) = config.mcp.profiles.get(default_name)
-    {
-        return Ok(mcps.clone());
-    }
-
-    // No MCPs specified - return empty (will use --strict-mcp-config with empty config)
-    // This gives a "minimal" session with no MCPs
-    Ok(vec![])
+/// Get default from first profile (if any)
+fn get_default(profiles: &IndexMap<String, Vec<String>>) -> Vec<String> {
+    profiles.values().next().cloned().unwrap_or_default()
 }
 
 /// Load all available MCP servers from sources and config
@@ -203,8 +235,8 @@ fn build_mcp_config(mcp_list: &[String], config: &Config) -> Result<(PathBuf, us
     Ok((temp_file, count))
 }
 
-/// Launch Claude Code with the specified MCP config
-fn launch_claude(mcp_config_path: Option<PathBuf>, extra_args: Vec<String>) -> Result<()> {
+/// Launch Claude Code with the specified MCP config and skill filter
+fn launch_claude(mcp_config_path: Option<PathBuf>, skill_list: Vec<String>, extra_args: Vec<String>) -> Result<()> {
     let mut cmd = Command::new("claude");
 
     // Always use strict mode - only load what we specify
@@ -216,10 +248,20 @@ fn launch_claude(mcp_config_path: Option<PathBuf>, extra_args: Vec<String>) -> R
         cmd.arg(path);
     }
 
+    // Set skill filter via environment variable
+    // Empty list means "no filter" (load all skills)
+    // Non-empty list means "only these skills"
+    if !skill_list.is_empty() {
+        cmd.env("PAIS_SKILLS", skill_list.join(","));
+    }
+
     // Pass through any extra args
     cmd.args(&extra_args);
 
     log::info!("Launching Claude with args: {:?}", cmd.get_args().collect::<Vec<_>>());
+    if !skill_list.is_empty() {
+        log::info!("PAIS_SKILLS={}", skill_list.join(","));
+    }
 
     // exec() replaces this process with claude
     // This never returns on success
@@ -228,17 +270,24 @@ fn launch_claude(mcp_config_path: Option<PathBuf>, extra_args: Vec<String>) -> R
     Err(eyre!("Failed to exec claude: {}", err))
 }
 
-/// List available MCPs and profiles
-fn list_mcps(format: OutputFormat, config: &Config) -> Result<()> {
+/// List available MCPs, skills, and profiles
+fn list_all(format: OutputFormat, config: &Config) -> Result<()> {
     let all_servers = load_all_mcp_servers(config);
+
+    // Load skills from index
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    let skill_index = generate_index(&skills_dir).ok();
 
     match format {
         OutputFormat::Json => {
             #[derive(Serialize)]
             struct ListOutput {
-                servers: Vec<McpServerInfo>,
-                profiles: HashMap<String, Vec<String>>,
-                default_profile: Option<String>,
+                mcp_servers: Vec<McpServerInfo>,
+                mcp_profiles: IndexMap<String, Vec<String>>,
+                mcp_default: Option<String>,
+                skills: Vec<SkillInfo>,
+                skill_profiles: IndexMap<String, Vec<String>>,
+                skill_default: Option<String>,
             }
 
             let servers: Vec<McpServerInfo> = all_servers
@@ -250,10 +299,27 @@ fn list_mcps(format: OutputFormat, config: &Config) -> Result<()> {
                 })
                 .collect();
 
+            let skills: Vec<SkillInfo> = skill_index
+                .as_ref()
+                .map(|idx| {
+                    idx.skills
+                        .values()
+                        .map(|s| SkillInfo {
+                            name: s.name.clone(),
+                            description: s.description.clone(),
+                            tier: format!("{:?}", s.tier),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
             let output = ListOutput {
-                servers,
-                profiles: config.mcp.profiles.clone(),
-                default_profile: config.mcp.default_profile.clone(),
+                mcp_servers: servers,
+                mcp_profiles: config.mcp.profiles.clone(),
+                mcp_default: config.mcp.profiles.keys().next().cloned(),
+                skills,
+                skill_profiles: config.skills.profiles.clone(),
+                skill_default: config.skills.profiles.keys().next().cloned(),
             };
 
             println!("{}", serde_json::to_string_pretty(&output)?);
@@ -261,9 +327,12 @@ fn list_mcps(format: OutputFormat, config: &Config) -> Result<()> {
         OutputFormat::Yaml => {
             #[derive(Serialize)]
             struct ListOutput {
-                servers: Vec<McpServerInfo>,
-                profiles: HashMap<String, Vec<String>>,
-                default_profile: Option<String>,
+                mcp_servers: Vec<McpServerInfo>,
+                mcp_profiles: IndexMap<String, Vec<String>>,
+                mcp_default: Option<String>,
+                skills: Vec<SkillInfo>,
+                skill_profiles: IndexMap<String, Vec<String>>,
+                skill_default: Option<String>,
             }
 
             let servers: Vec<McpServerInfo> = all_servers
@@ -275,21 +344,36 @@ fn list_mcps(format: OutputFormat, config: &Config) -> Result<()> {
                 })
                 .collect();
 
+            let skills: Vec<SkillInfo> = skill_index
+                .as_ref()
+                .map(|idx| {
+                    idx.skills
+                        .values()
+                        .map(|s| SkillInfo {
+                            name: s.name.clone(),
+                            description: s.description.clone(),
+                            tier: format!("{:?}", s.tier),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
             let output = ListOutput {
-                servers,
-                profiles: config.mcp.profiles.clone(),
-                default_profile: config.mcp.default_profile.clone(),
+                mcp_servers: servers,
+                mcp_profiles: config.mcp.profiles.clone(),
+                mcp_default: config.mcp.profiles.keys().next().cloned(),
+                skills,
+                skill_profiles: config.skills.profiles.clone(),
+                skill_default: config.skills.profiles.keys().next().cloned(),
             };
 
             println!("{}", serde_yaml::to_string(&output)?);
         }
         OutputFormat::Text => {
-            // Servers section
-            println!("{}", "Available MCP Servers:".bold());
+            // MCP Servers section
+            println!("{}", "MCP Servers:".bold());
             if all_servers.is_empty() {
                 println!("  {}", "(none found)".dimmed());
-                println!();
-                println!("  Add servers to ~/.mcp.json or configure in pais.yaml");
             } else {
                 let mut server_list: Vec<_> = all_servers.iter().collect();
                 server_list.sort_by_key(|(name, _)| name.as_str());
@@ -304,26 +388,22 @@ fn list_mcps(format: OutputFormat, config: &Config) -> Result<()> {
                 }
             }
 
-            // Profiles section
+            // MCP Profiles section
             println!();
-            println!("{}", "Profiles:".bold());
+            println!("{}", "MCP Profiles:".bold());
             if config.mcp.profiles.is_empty() {
                 println!("  {}", "(none defined)".dimmed());
-                println!();
-                println!("  Define profiles in pais.yaml under mcp.profiles");
             } else {
-                let mut profile_list: Vec<_> = config.mcp.profiles.iter().collect();
-                profile_list.sort_by_key(|(name, _)| name.as_str());
-
-                for (name, servers) in profile_list {
-                    let default_marker = if config.mcp.default_profile.as_ref() == Some(name) {
+                let default_name = config.mcp.profiles.keys().next();
+                for (name, servers) in &config.mcp.profiles {
+                    let default_marker = if Some(name) == default_name {
                         " (default)".green().to_string()
                     } else {
                         String::new()
                     };
 
                     let server_str = if servers.is_empty() {
-                        "(no MCPs)".dimmed().to_string()
+                        "(empty)".dimmed().to_string()
                     } else {
                         servers.join(", ")
                     };
@@ -332,12 +412,55 @@ fn list_mcps(format: OutputFormat, config: &Config) -> Result<()> {
                 }
             }
 
+            // Skills section
+            println!();
+            println!("{}", "Skills:".bold());
+            if let Some(ref idx) = skill_index {
+                let mut skills: Vec<_> = idx.skills.values().collect();
+                skills.sort_by_key(|s| &s.name);
+
+                for skill in skills {
+                    let tier_str = match skill.tier {
+                        crate::skill::parser::SkillTier::Core => "(core)".green(),
+                        crate::skill::parser::SkillTier::Deferred => "(deferred)".dimmed(),
+                    };
+                    println!("  {} {} {}", skill.name.cyan(), tier_str, skill.description.dimmed());
+                }
+            } else {
+                println!("  {}", "(unable to load skill index)".dimmed());
+            }
+
+            // Skill Profiles section
+            println!();
+            println!("{}", "Skill Profiles:".bold());
+            if config.skills.profiles.is_empty() {
+                println!("  {}", "(none defined)".dimmed());
+            } else {
+                let default_name = config.skills.profiles.keys().next();
+                for (name, skills) in &config.skills.profiles {
+                    let default_marker = if Some(name) == default_name {
+                        " (default)".green().to_string()
+                    } else {
+                        String::new()
+                    };
+
+                    let skill_str = if skills.is_empty() {
+                        "(empty - loads all skills)".dimmed().to_string()
+                    } else {
+                        skills.join(", ")
+                    };
+
+                    println!("  {}{}: {}", name.yellow(), default_marker, skill_str);
+                }
+            }
+
             // Usage hints
             println!();
             println!("{}", "Usage:".bold());
-            println!("  pais session                    # Use default profile or no MCPs");
-            println!("  pais session --profile minimal  # Use 'minimal' profile");
-            println!("  pais session --mcp github,slack # Load specific MCPs");
+            println!("  pais session                    # Use default profiles");
+            println!("  pais session -m work -s dev     # Use specific profiles");
+            println!("  pais session -m github,slack    # Load specific MCPs");
+            println!("  pais session -s rust-coder,otto # Load specific skills");
             println!("  pais session --dry-run          # Show what would happen");
         }
     }
@@ -350,19 +473,73 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_resolve_mcp_list_explicit() {
-        let config = Config::default();
-        let result = resolve_mcp_list(Some(vec!["github".to_string()]), None, &config);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec!["github".to_string()]);
+    fn test_expand_names_direct() {
+        let profiles = IndexMap::new();
+        let result = expand_names(&["foo".to_string(), "bar".to_string()], &profiles);
+        assert_eq!(result, vec!["foo", "bar"]);
     }
 
     #[test]
-    fn test_resolve_mcp_list_empty() {
-        let config = Config::default();
-        let result = resolve_mcp_list(None, None, &config);
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+    fn test_expand_names_with_profile() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string(), "otto".to_string()]);
+
+        let result = expand_names(&["dev".to_string()], &profiles);
+        assert_eq!(result, vec!["rust-coder", "otto"]);
+    }
+
+    #[test]
+    fn test_expand_names_mixed() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string(), "otto".to_string()]);
+
+        let result = expand_names(&["dev".to_string(), "fabric".to_string()], &profiles);
+        assert_eq!(result, vec!["rust-coder", "otto", "fabric"]);
+    }
+
+    #[test]
+    fn test_expand_names_deduplicates() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string(), "otto".to_string()]);
+
+        // rust-coder appears in profile and as direct name
+        let result = expand_names(&["dev".to_string(), "rust-coder".to_string()], &profiles);
+        assert_eq!(result, vec!["rust-coder", "otto"]);
+    }
+
+    #[test]
+    fn test_get_default_empty() {
+        let profiles: IndexMap<String, Vec<String>> = IndexMap::new();
+        let result = get_default(&profiles);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_get_default_first_profile() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("first".to_string(), vec!["a".to_string(), "b".to_string()]);
+        profiles.insert("second".to_string(), vec!["c".to_string()]);
+
+        let result = get_default(&profiles);
+        assert_eq!(result, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn test_resolve_list_with_input() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string()]);
+
+        let result = resolve_list(Some(vec!["fabric".to_string()]), &profiles);
+        assert_eq!(result, vec!["fabric"]);
+    }
+
+    #[test]
+    fn test_resolve_list_without_input() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string()]);
+
+        let result = resolve_list(None, &profiles);
+        assert_eq!(result, vec!["rust-coder"]);
     }
 
     #[test]
@@ -382,5 +559,161 @@ mod tests {
         let parsed: McpJsonFile = serde_json::from_str(json).unwrap();
         assert!(parsed.mcp_servers.contains_key("slack"));
         assert_eq!(parsed.mcp_servers["slack"].command, "npx");
+    }
+
+    // === Additional positive tests ===
+
+    #[test]
+    fn test_expand_names_multiple_profiles() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string(), "otto".to_string()]);
+        profiles.insert(
+            "research".to_string(),
+            vec!["fabric".to_string(), "youtube".to_string()],
+        );
+
+        let result = expand_names(&["dev".to_string(), "research".to_string()], &profiles);
+        assert_eq!(result, vec!["rust-coder", "otto", "fabric", "youtube"]);
+    }
+
+    #[test]
+    fn test_expand_names_profile_with_overlapping_items() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string(), "fabric".to_string()]);
+        profiles.insert(
+            "research".to_string(),
+            vec!["fabric".to_string(), "youtube".to_string()],
+        );
+
+        // fabric appears in both profiles - should deduplicate
+        let result = expand_names(&["dev".to_string(), "research".to_string()], &profiles);
+        assert_eq!(result, vec!["rust-coder", "fabric", "youtube"]);
+    }
+
+    #[test]
+    fn test_resolve_list_expands_profile_in_input() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string(), "otto".to_string()]);
+
+        // When user provides -s dev, it should expand the profile
+        let result = resolve_list(Some(vec!["dev".to_string()]), &profiles);
+        assert_eq!(result, vec!["rust-coder", "otto"]);
+    }
+
+    #[test]
+    fn test_get_default_empty_first_profile() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("minimal".to_string(), vec![]); // First = default, empty
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string()]);
+
+        let result = get_default(&profiles);
+        assert!(result.is_empty()); // minimal profile is empty
+    }
+
+    #[test]
+    fn test_resolve_list_none_with_empty_first_profile() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("minimal".to_string(), vec![]); // First = default
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string()]);
+
+        // No input → uses default (first profile which is empty)
+        let result = resolve_list(None, &profiles);
+        assert!(result.is_empty());
+    }
+
+    // === Negative tests ===
+
+    #[test]
+    fn test_expand_names_unknown_profile_treated_as_literal() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string()]);
+
+        // "unknown" is not a profile, so treated as a literal skill name
+        let result = expand_names(&["unknown".to_string()], &profiles);
+        assert_eq!(result, vec!["unknown"]);
+    }
+
+    #[test]
+    fn test_expand_names_empty_input() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string()]);
+
+        let result = expand_names(&[], &profiles);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_resolve_list_empty_vec_input() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("dev".to_string(), vec!["rust-coder".to_string()]);
+
+        // Empty vec provided → returns empty (not default)
+        let result = resolve_list(Some(vec![]), &profiles);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_expand_names_preserves_order() {
+        let profiles = IndexMap::new();
+
+        let result = expand_names(&["c".to_string(), "a".to_string(), "b".to_string()], &profiles);
+        assert_eq!(result, vec!["c", "a", "b"]);
+    }
+
+    #[test]
+    fn test_expand_names_profile_order_preserved() {
+        let mut profiles = IndexMap::new();
+        profiles.insert(
+            "dev".to_string(),
+            vec!["z".to_string(), "a".to_string(), "m".to_string()],
+        );
+
+        let result = expand_names(&["dev".to_string()], &profiles);
+        assert_eq!(result, vec!["z", "a", "m"]); // Order from profile preserved
+    }
+
+    #[test]
+    fn test_get_default_respects_insertion_order() {
+        let mut profiles = IndexMap::new();
+        // Insert in specific order
+        profiles.insert("second".to_string(), vec!["b".to_string()]);
+        profiles.insert("first".to_string(), vec!["a".to_string()]);
+
+        // IndexMap preserves insertion order, so "second" is first
+        let result = get_default(&profiles);
+        assert_eq!(result, vec!["b"]);
+    }
+
+    // === MCP-specific tests (same logic applies) ===
+
+    #[test]
+    fn test_mcp_profile_expansion() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("work".to_string(), vec!["github".to_string(), "slack".to_string()]);
+        profiles.insert("minimal".to_string(), vec![]);
+
+        let result = resolve_list(Some(vec!["work".to_string()]), &profiles);
+        assert_eq!(result, vec!["github", "slack"]);
+    }
+
+    #[test]
+    fn test_mcp_mixed_profile_and_direct() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("work".to_string(), vec!["github".to_string(), "slack".to_string()]);
+
+        // User specifies profile + additional MCP
+        let result = resolve_list(Some(vec!["work".to_string(), "jira".to_string()]), &profiles);
+        assert_eq!(result, vec!["github", "slack", "jira"]);
+    }
+
+    #[test]
+    fn test_mcp_default_is_first_profile() {
+        let mut profiles = IndexMap::new();
+        profiles.insert("minimal".to_string(), vec![]);
+        profiles.insert("work".to_string(), vec!["github".to_string()]);
+
+        // No flags → uses first profile (minimal = empty)
+        let result = resolve_list(None, &profiles);
+        assert!(result.is_empty());
     }
 }

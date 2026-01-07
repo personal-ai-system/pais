@@ -4,25 +4,82 @@
 
 ## Overview
 
-Just as `pais session` supports dynamic MCP loading, we can apply the same pattern to skills. This lets you start focused sessions with only relevant skills loaded.
+`pais session` supports dynamic loading for both MCP servers and skills. This lets you start focused sessions with only relevant capabilities loaded.
 
 ```bash
-# Current: dynamic MCPs
+# Dynamic MCPs
 pais session -m github -m slack
 
-# Proposed: dynamic skills
+# Dynamic skills
 pais session -s rust-coder -s otto
 
 # Combined
 pais session -m github -s rust-coder -s otto
 
-# With profiles
-pais session --mcp-profile work --skill-profile dev
+# Using profiles (profiles and individual names are interchangeable)
+pais session -m work -s dev
 ```
 
-## Architecture Comparison
+## Design Principles
 
-### MCP Flow (Current)
+### Unified Flag Behavior
+
+Both `-m`/`--mcp` and `-s`/`--skill` flags accept **either profile names or individual names**:
+
+```bash
+# These are equivalent if 'dev' profile contains [rust-coder, otto]
+pais session -s dev
+pais session -s rust-coder -s otto
+
+# Mix profiles and individuals
+pais session -s dev -s fabric    # expands to: rust-coder, otto, fabric
+```
+
+**Resolution order for each name:**
+1. Check if name matches a profile → expand to profile's list
+2. Otherwise treat as individual MCP/skill name
+
+### First Profile = Default
+
+Profiles use `IndexMap` to preserve YAML ordering. The **first profile defined is the default** when no flags are provided:
+
+```yaml
+skills:
+  profiles:
+    dev:              # ← First = default (used when no -s flag)
+      - rust-coder
+      - otto
+    research:
+      - fabric
+      - tech-researcher
+    minimal: []       # For skills: empty = load all (see "Empty List Semantics")
+```
+
+No separate `default-profile` field needed.
+
+### Empty List Semantics
+
+Empty profiles have different meanings for MCPs vs skills due to how they're consumed:
+
+**MCPs:** Empty list = load no MCPs (Claude receives empty MCP config)
+```bash
+pais session -m minimal    # No MCPs loaded
+```
+
+**Skills:** Empty list = load ALL skills (no whitelist = everything passes)
+```bash
+pais session -s all        # All skills loaded (empty whitelist = no filtering)
+```
+
+This is because skills use a whitelist model:
+- Non-empty PAIS_SKILLS → only those skills load
+- Empty PAIS_SKILLS → no whitelist → all skills load
+
+> **Future consideration:** Could add explicit `"*"` sentinel to mean "all" if empty-list semantics prove confusing.
+
+## Architecture
+
+### MCP Flow
 
 ```
 pais session -m github -m slack
@@ -30,9 +87,10 @@ pais session -m github -m slack
     ▼
 ┌─────────────────────────────────────┐
 │ session.rs                          │
-│ 1. Parse --mcp flags                │
-│ 2. Build temp JSON with selections  │
-│ 3. Write to /tmp/pais-mcp-xxx.json  │
+│ 1. Parse -m flags                   │
+│ 2. Expand any profile names         │
+│ 3. Build temp JSON with selections  │
+│ 4. Write to /tmp/pais-mcp-xxx.json  │
 └─────────────────────────────────────┘
     │
     ▼
@@ -46,9 +104,7 @@ exec claude --strict-mcp-config --mcp-config /tmp/pais-mcp-xxx.json
 └─────────────────────────────────────┘
 ```
 
-**Key:** Claude has built-in `--mcp-config` flag. We write the file, Claude reads it.
-
-### Skills Flow (Proposed)
+### Skills Flow
 
 ```
 pais session -s rust-coder -s otto
@@ -56,8 +112,9 @@ pais session -s rust-coder -s otto
     ▼
 ┌─────────────────────────────────────┐
 │ session.rs                          │
-│ 1. Parse --skill flags              │
-│ 2. Set PAIS_SKILLS env var          │
+│ 1. Parse -s flags                   │
+│ 2. Expand any profile names         │
+│ 3. Set PAIS_SKILLS env var          │
 │    PAIS_SKILLS=rust-coder,otto      │
 └─────────────────────────────────────┘
     │
@@ -80,30 +137,45 @@ exec claude (env var inherited)
 └─────────────────────────────────────┘
 ```
 
-**Key:** Claude has no skill flag. We control injection via our hook, so we pass selection through environment variable.
-
-### Why Different Transport Mechanisms?
+### Why Different Transport?
 
 | Aspect | MCP | Skills |
 |--------|-----|--------|
-| Selection flags | `-m` / `--mcp` | `-s` / `--skill` |
-| Profile flags | `--mcp-profile` | `--skill-profile` |
+| Flag | `-m` / `--mcp` | `-s` / `--skill` |
 | Transport | Temp JSON file | Environment variable |
 | Consumer | Claude's `--mcp-config` | Our `pais context inject` |
-| Why? | Claude reads the file | We control the injection |
+| Reason | Claude reads the file | We control the injection |
 
-The environment variable survives the `exec()` call, allowing `pais session` to communicate with `pais context inject` even though they run in separate processes.
+Environment variable survives the `exec()` call, allowing `pais session` to communicate with `pais context inject` across processes.
 
-## Implementation Plan
+## Configuration
 
-### 1. Add Skill Configuration (`config.rs`)
+### pais.yaml Structure
 
 ```yaml
-# In pais.yaml
+# MCP configuration
+mcp:
+  sources:
+    - ~/.mcp.json
+
+  profiles:
+    minimal: []           # First = default
+    github:
+      - multi-account-github
+    work:
+      - multi-account-github
+      - slack
+      - atlassian
+
+  servers:
+    multi-account-github:
+      command: multi-account-github-mcp
+      args: [serve]
+
+# Skills configuration
 skills:
   profiles:
-    minimal: []
-    dev:
+    dev:                  # First = default
       - rust-coder
       - otto
       - clone
@@ -114,66 +186,86 @@ skills:
     writing:
       - writing-researcher
       - fabric
-  default-profile: dev
+    minimal: []
 ```
 
-### 2. Add CLI Flags (`cli.rs`)
+### Implementation Details
+
+#### Config structs (`config.rs`)
 
 ```rust
-/// Launch Claude Code with dynamic MCP/skill configuration
+use indexmap::IndexMap;
+
+/// MCP configuration
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct McpConfig {
+    pub sources: Vec<PathBuf>,
+    pub profiles: IndexMap<String, Vec<String>>,  // Ordered!
+    pub servers: HashMap<String, McpServerConfig>,
+}
+
+/// Skills configuration
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct SkillsConfig {
+    pub profiles: IndexMap<String, Vec<String>>,  // Ordered!
+}
+```
+
+#### CLI flags (`cli.rs`)
+
+```rust
 Session {
-    /// MCP servers to load (repeatable)
-    #[arg(short = 'm', long, action = ArgAction::Append)]
+    /// MCP servers or profiles to load (comma-separated)
+    #[arg(short, long, value_delimiter = ',')]
     mcp: Option<Vec<String>>,
 
-    /// Use a named MCP profile
-    #[arg(long)]
-    mcp_profile: Option<String>,
-
-    /// Skills to load (repeatable)
-    #[arg(short = 's', long, action = ArgAction::Append)]
+    /// Skills or profiles to load (comma-separated)
+    #[arg(short, long, value_delimiter = ',')]
     skill: Option<Vec<String>>,
 
-    /// Use a named skill profile
-    #[arg(long)]
-    skill_profile: Option<String>,
-
-    /// List available MCPs, skills, and profiles
     #[arg(short, long)]
     list: bool,
 
-    // ... rest unchanged
+    #[arg(long)]
+    dry_run: bool,
+
+    // ...
 }
 ```
 
-### 3. Set Environment Variable (`session.rs`)
+#### Resolution logic (`session.rs`)
 
 ```rust
-fn launch_claude(
-    mcp_config_path: Option<PathBuf>,
-    skill_list: Vec<String>,
-    extra_args: Vec<String>,
-) -> Result<()> {
-    let mut cmd = Command::new("claude");
-
-    // MCP config (existing)
-    cmd.arg("--strict-mcp-config");
-    if let Some(ref path) = mcp_config_path {
-        cmd.arg("--mcp-config").arg(path);
+/// Expand a list of names, replacing profile names with their contents
+fn expand_names(
+    names: &[String],
+    profiles: &IndexMap<String, Vec<String>>,
+) -> Vec<String> {
+    let mut result = Vec::new();
+    for name in names {
+        if let Some(profile_contents) = profiles.get(name) {
+            // It's a profile - expand it
+            result.extend(profile_contents.iter().cloned());
+        } else {
+            // It's a direct name
+            result.push(name.clone());
+        }
     }
+    // Deduplicate while preserving order
+    let mut seen = HashSet::new();
+    result.retain(|x| seen.insert(x.clone()));
+    result
+}
 
-    // Skill selection (new)
-    if !skill_list.is_empty() {
-        cmd.env("PAIS_SKILLS", skill_list.join(","));
-    }
-
-    cmd.args(&extra_args);
-    let err = cmd.exec();
-    Err(eyre!("Failed to exec claude: {}", err))
+/// Get default from first profile (if any)
+fn get_default(profiles: &IndexMap<String, Vec<String>>) -> Vec<String> {
+    profiles.values().next().cloned().unwrap_or_default()
 }
 ```
 
-### 4. Filter Skills in Context Injection (`context.rs`)
+#### Context filtering (`context.rs`)
 
 ```rust
 fn inject_context(raw: bool, config: &Config) -> Result<()> {
@@ -183,9 +275,7 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         .filter(|s| !s.is_empty())
         .map(|s| s.split(',').map(String::from).collect());
 
-    // ... existing index generation ...
-
-    // Filter core skills
+    // Filter skills based on PAIS_SKILLS
     let core_skills = if let Some(ref filter) = skill_filter {
         load_core_skills(&skills_dir, &index)
             .into_iter()
@@ -195,35 +285,43 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         load_core_skills(&skills_dir, &index)
     };
 
-    // Filter deferred skills similarly...
+    // Similar filtering for deferred skills...
 }
 ```
 
 ## Usage Examples
 
 ```bash
-# Minimal session (no skills)
-pais session --skill-profile minimal
+# Default session (uses first profile for both MCP and skills)
+pais session
+
+# Minimal session (nothing loaded)
+pais session -m minimal -s minimal
 
 # Development session
-pais session -s rust-coder -s otto -s clone
+pais session -s dev                    # profile
+pais session -s rust-coder -s otto     # individuals (same result)
 
 # Research session with MCPs
-pais session -m slack -m github -s tech-researcher -s fabric
+pais session -m work -s research
 
-# Use profiles for both
-pais session --mcp-profile work --skill-profile dev
+# Mix profiles and individuals
+pais session -s dev -s fabric          # dev profile + fabric skill
 
 # List everything available
 pais session --list
+
+# Preview without launching
+pais session -m work -s dev --dry-run
 ```
 
 ## Benefits
 
-1. **Reduced context tokens** - Only load skills relevant to the task
-2. **Faster startup** - Less content to inject
-3. **Focused sessions** - Avoid skill confusion/overlap
-4. **Profiles** - Save common combinations for reuse
+1. **Reduced context tokens** — Only load skills relevant to the task
+2. **Faster startup** — Less content to inject
+3. **Focused sessions** — Avoid skill confusion/overlap
+4. **Simple mental model** — Profiles and names are interchangeable
+5. **Sensible defaults** — First profile = default, no extra config
 
 ## Future Considerations
 

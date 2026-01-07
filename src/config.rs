@@ -1,4 +1,5 @@
 use eyre::{Context, Result};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -43,6 +44,7 @@ pub struct Config {
     pub observability: ObservabilityConfig,
     pub environment: EnvironmentConfig,
     pub mcp: McpConfig,
+    pub skills: SkillsConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -102,6 +104,7 @@ impl Default for Config {
             observability: ObservabilityConfig::default(),
             environment: EnvironmentConfig::default(),
             mcp: McpConfig::default(),
+            skills: SkillsConfig::default(),
         }
     }
 }
@@ -178,10 +181,8 @@ pub struct McpConfig {
     pub sources: Vec<PathBuf>,
 
     /// Named profiles mapping to lists of MCP server names
-    pub profiles: HashMap<String, Vec<String>>,
-
-    /// Default profile to use when none specified
-    pub default_profile: Option<String>,
+    /// First profile is the default when no -m flag provided
+    pub profiles: IndexMap<String, Vec<String>>,
 
     /// Additional MCP server definitions (supplements sources)
     pub servers: HashMap<String, McpServerConfig>,
@@ -201,6 +202,15 @@ pub struct McpServerConfig {
     /// Environment variables for the server
     #[serde(default)]
     pub env: HashMap<String, String>,
+}
+
+/// Skills configuration for dynamic skill loading
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct SkillsConfig {
+    /// Named profiles mapping to lists of skill names
+    /// First profile is the default when no -s flag provided
+    pub profiles: IndexMap<String, Vec<String>>,
 }
 
 impl Config {

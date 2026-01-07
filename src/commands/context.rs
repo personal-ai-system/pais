@@ -10,8 +10,14 @@
 //!   - The `core` skill (always force-loaded)
 //! - **Tier 1 (Deferred)**: Only name/description/triggers in context
 //!   - Full content loaded when skill is invoked
+//!
+//! ## Skill Filtering
+//!
+//! If PAIS_SKILLS environment variable is set (comma-separated list of skill names),
+//! only those skills will be loaded. If empty or unset, all skills are loaded.
 
 use eyre::{Context, Result};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -51,14 +57,39 @@ fn extract_skill_body(content: &str) -> Option<String> {
     None
 }
 
+/// Read the skill filter from PAIS_SKILLS environment variable
+fn get_skill_filter() -> Option<HashSet<String>> {
+    std::env::var("PAIS_SKILLS")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.split(',').map(|s| s.trim().to_string()).collect())
+}
+
+/// Check if a skill should be included based on the filter
+fn should_include_skill(name: &str, filter: &Option<HashSet<String>>) -> bool {
+    match filter {
+        Some(allowed) => allowed.contains(name),
+        None => true, // No filter = include all
+    }
+}
+
 /// Load all core-tier skills (Tier 0 - always present)
 ///
 /// Returns a list of (name, body) tuples for all skills marked as tier: core
-fn load_core_skills(skills_dir: &Path, index: &SkillIndex) -> Vec<(String, String)> {
+/// If skill_filter is Some, only includes skills in the filter set
+fn load_core_skills(
+    skills_dir: &Path,
+    index: &SkillIndex,
+    skill_filter: &Option<HashSet<String>>,
+) -> Vec<(String, String)> {
     let mut core_skills = Vec::new();
 
-    // Get all core-tier skills from the index
-    let mut core_entries: Vec<_> = index.skills.values().filter(|s| s.tier == SkillTier::Core).collect();
+    // Get all core-tier skills from the index, applying filter
+    let mut core_entries: Vec<_> = index
+        .skills
+        .values()
+        .filter(|s| s.tier == SkillTier::Core && should_include_skill(&s.name, skill_filter))
+        .collect();
 
     // Sort to ensure consistent ordering (put "core" first)
     core_entries.sort_by(|a, b| {
@@ -82,6 +113,56 @@ fn load_core_skills(skills_dir: &Path, index: &SkillIndex) -> Vec<(String, Strin
     }
 
     core_skills
+}
+
+/// Generate deferred skills section from index, applying filter
+fn generate_deferred_skills_content(index: &SkillIndex, skill_filter: &Option<HashSet<String>>) -> Option<String> {
+    // Get deferred skills, applying filter
+    let mut deferred_entries: Vec<_> = index
+        .skills
+        .values()
+        .filter(|s| s.tier == SkillTier::Deferred && should_include_skill(&s.name, skill_filter))
+        .collect();
+
+    if deferred_entries.is_empty() {
+        return None;
+    }
+
+    // Sort alphabetically
+    deferred_entries.sort_by_key(|s| &s.name);
+
+    // Skills table
+    let mut lines = vec![
+        "## Available Skills".to_string(),
+        String::new(),
+        "| Skill | Description | Triggers |".to_string(),
+        "|-------|-------------|----------|".to_string(),
+    ];
+
+    for entry in &deferred_entries {
+        let triggers = entry.triggers.join(", ");
+        let triggers_display = if triggers.is_empty() { "-".to_string() } else { triggers };
+        // Truncate description for table
+        let desc = if entry.description.len() > 50 {
+            format!("{}...", &entry.description[..47])
+        } else {
+            entry.description.clone()
+        };
+        lines.push(format!("| **{}** | {} | {} |", entry.name, desc, triggers_display));
+    }
+
+    // Routing instructions
+    lines.push(String::new());
+    lines.push("## Routing Instructions".to_string());
+    lines.push(String::new());
+    lines.push("When a user request matches a skill's triggers:".to_string());
+    lines.push(
+        "1. Read the full SKILL.md file from `/home/saidler/.config/pais/skills/[skill-name]/SKILL.md`".to_string(),
+    );
+    lines.push("2. Follow the skill's instructions and conventions".to_string());
+    lines.push("3. No need to ask for permission - the skill is pre-approved".to_string());
+
+    Some(lines.join("\n"))
 }
 
 /// Check if a tool is available in PATH
@@ -191,6 +272,14 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
 
     let context_path = skills_dir.join("context-snippet.md");
 
+    // Check for skill filter from environment
+    let skill_filter = get_skill_filter();
+    if let Some(ref filter) = skill_filter {
+        log::info!("Skill filter active: {:?}", filter);
+    } else {
+        log::debug!("No skill filter - loading all skills");
+    }
+
     // Generate or load the index
     let index = generate_index(&skills_dir).context("Failed to generate skill index")?;
     log::debug!(
@@ -200,8 +289,8 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         index.deferred_count
     );
 
-    // Load all core-tier skills (Tier 0)
-    let core_skills = load_core_skills(&skills_dir, &index);
+    // Load core-tier skills (Tier 0), applying filter
+    let core_skills = load_core_skills(&skills_dir, &index, &skill_filter);
     log::debug!(
         "Loaded {} core skills: [{}]",
         core_skills.len(),
@@ -219,16 +308,21 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         if env_context.is_some() { "generated" } else { "none" }
     );
 
-    // Check if context file exists (Tier 1 - deferred skills)
-    let context_content = if context_path.exists() {
+    // Generate deferred skills content (Tier 1)
+    // If skill filter is active, generate dynamically to apply the filter
+    // Otherwise, use the static context-snippet.md if available
+    let context_content = if skill_filter.is_some() {
+        log::debug!("Generating filtered deferred skills content");
+        generate_deferred_skills_content(&index, &skill_filter)
+    } else if context_path.exists() {
         log::debug!("Loading deferred skills context from: {}", context_path.display());
         Some(
             fs::read_to_string(&context_path)
                 .with_context(|| format!("Failed to read context file: {}", context_path.display()))?,
         )
     } else {
-        log::debug!("No deferred skills context file found");
-        None
+        log::debug!("Generating deferred skills content (no static file)");
+        generate_deferred_skills_content(&index, &skill_filter)
     };
 
     // If neither exists, warn and exit
@@ -254,15 +348,27 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
             println!("{}", context);
         }
     } else {
+        // Calculate actual loaded counts
+        let loaded_core_count = core_skills.len();
+        let loaded_deferred_count = context_content.as_ref().map(|c| c.matches("| **").count()).unwrap_or(0);
+        let loaded_total = loaded_core_count + loaded_deferred_count;
+
         // Output with system-reminder wrapper for Claude Code
         println!("<system-reminder>");
         println!("PAIS CONTEXT (Auto-loaded at Session Start)");
         println!();
         println!("📅 Current Time: {}", get_local_timestamp());
-        println!(
-            "📦 Skills: {} total, {} core-tier",
-            index.total_skills, index.core_count
-        );
+        if skill_filter.is_some() {
+            println!(
+                "📦 Skills: {} loaded (filtered), {} core-tier",
+                loaded_total, loaded_core_count
+            );
+        } else {
+            println!(
+                "📦 Skills: {} total, {} core-tier",
+                index.total_skills, index.core_count
+            );
+        }
 
         // Environment context (if configured)
         if let Some(ref env) = env_context {
@@ -306,10 +412,17 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         println!();
         println!("</system-reminder>");
         println!();
-        println!(
-            "✅ PAIS context loaded ({} skills, {} core-tier)",
-            index.total_skills, index.core_count
-        );
+        if skill_filter.is_some() {
+            println!(
+                "✅ PAIS context loaded ({} skills filtered, {} core-tier)",
+                loaded_total, loaded_core_count
+            );
+        } else {
+            println!(
+                "✅ PAIS context loaded ({} skills, {} core-tier)",
+                index.total_skills, index.core_count
+            );
+        }
     }
 
     Ok(())
@@ -325,5 +438,95 @@ mod tests {
         // Should be in format like "2026-01-02 14:30:00 PST"
         assert!(ts.contains("-"));
         assert!(ts.contains(":"));
+    }
+
+    // === Skill filter tests ===
+
+    #[test]
+    fn test_should_include_skill_no_filter() {
+        let filter: Option<HashSet<String>> = None;
+        assert!(should_include_skill("rust-coder", &filter));
+        assert!(should_include_skill("otto", &filter));
+        assert!(should_include_skill("anything", &filter));
+    }
+
+    #[test]
+    fn test_should_include_skill_with_filter_positive() {
+        let filter: Option<HashSet<String>> = Some(["rust-coder", "otto"].iter().map(|s| s.to_string()).collect());
+        assert!(should_include_skill("rust-coder", &filter));
+        assert!(should_include_skill("otto", &filter));
+    }
+
+    #[test]
+    fn test_should_include_skill_with_filter_negative() {
+        let filter: Option<HashSet<String>> = Some(["rust-coder", "otto"].iter().map(|s| s.to_string()).collect());
+        assert!(!should_include_skill("fabric", &filter));
+        assert!(!should_include_skill("unknown", &filter));
+    }
+
+    #[test]
+    fn test_should_include_skill_empty_filter() {
+        let filter: Option<HashSet<String>> = Some(HashSet::new());
+        // Empty filter set means nothing matches
+        assert!(!should_include_skill("rust-coder", &filter));
+        assert!(!should_include_skill("anything", &filter));
+    }
+
+    #[test]
+    fn test_get_skill_filter_parsing() {
+        // Test the parsing logic directly
+        let env_value = "rust-coder,otto,fabric";
+        let filter: HashSet<String> = env_value.split(',').map(|s| s.trim().to_string()).collect();
+        assert_eq!(filter.len(), 3);
+        assert!(filter.contains("rust-coder"));
+        assert!(filter.contains("otto"));
+        assert!(filter.contains("fabric"));
+    }
+
+    #[test]
+    fn test_get_skill_filter_with_whitespace() {
+        // Test that whitespace is trimmed
+        let env_value = "rust-coder , otto , fabric";
+        let filter: HashSet<String> = env_value.split(',').map(|s| s.trim().to_string()).collect();
+        assert!(filter.contains("rust-coder"));
+        assert!(filter.contains("otto"));
+        assert!(filter.contains("fabric"));
+        // Should NOT contain untrimmed versions
+        assert!(!filter.contains(" otto "));
+    }
+
+    #[test]
+    fn test_extract_skill_body_valid() {
+        let content = r#"---
+name: test-skill
+description: A test skill
+---
+
+# Test Skill
+
+This is the body content.
+"#;
+        let body = extract_skill_body(content);
+        assert!(body.is_some());
+        let body = body.unwrap();
+        assert!(body.contains("# Test Skill"));
+        assert!(body.contains("This is the body content."));
+    }
+
+    #[test]
+    fn test_extract_skill_body_no_frontmatter() {
+        let content = "# Just content\n\nNo frontmatter here.";
+        let body = extract_skill_body(content);
+        assert!(body.is_none());
+    }
+
+    #[test]
+    fn test_extract_skill_body_empty_body() {
+        let content = r#"---
+name: test-skill
+---
+"#;
+        let body = extract_skill_body(content);
+        assert!(body.is_none()); // Empty body after frontmatter
     }
 }

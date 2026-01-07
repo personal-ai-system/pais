@@ -169,17 +169,17 @@ pub enum Commands {
         args: Vec<String>,
     },
 
-    /// Launch Claude Code with dynamic MCP configuration
+    /// Launch Claude Code with dynamic MCP and skill configuration
     Session {
-        /// MCP servers to load (comma-separated)
+        /// MCP servers or profiles to load (comma-separated, profiles expand to their contents)
         #[arg(short, long, value_delimiter = ',')]
         mcp: Option<Vec<String>>,
 
-        /// Use a named MCP profile from pais.yaml
-        #[arg(short, long)]
-        profile: Option<String>,
+        /// Skills or profiles to load (comma-separated, profiles expand to their contents)
+        #[arg(short, long, value_delimiter = ',')]
+        skill: Option<Vec<String>>,
 
-        /// List available MCPs and profiles
+        /// List available MCPs, skills, and profiles
         #[arg(short, long)]
         list: bool,
 
