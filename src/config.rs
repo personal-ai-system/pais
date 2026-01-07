@@ -43,7 +43,6 @@ pub struct Config {
     pub observability: ObservabilityConfig,
     pub environment: EnvironmentConfig,
     pub mcp: McpConfig,
-    pub skills: SkillsConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -103,7 +102,6 @@ impl Default for Config {
             observability: ObservabilityConfig::default(),
             environment: EnvironmentConfig::default(),
             mcp: McpConfig::default(),
-            skills: SkillsConfig::default(),
         }
     }
 }
@@ -203,17 +201,6 @@ pub struct McpServerConfig {
     /// Environment variables for the server
     #[serde(default)]
     pub env: HashMap<String, String>,
-}
-
-/// Skills configuration for dynamic skill loading
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct SkillsConfig {
-    /// Named profiles mapping to lists of skill names
-    pub profiles: HashMap<String, Vec<String>>,
-
-    /// Default profile to use when none specified
-    pub default_profile: Option<String>,
 }
 
 impl Config {

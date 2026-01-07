@@ -1,24 +1,18 @@
-//! Session command - Launch Claude Code with dynamic MCP and skill configuration
+//! Session command - Launch Claude Code with dynamic MCP configuration
 //!
 //! This module provides `pais session` which wraps Claude Code startup,
-//! allowing selective MCP server and skill loading to reduce context token usage.
+//! allowing selective MCP server loading to reduce context token usage.
 //!
 //! ## Usage
 //!
 //! ```bash
-//! # Launch with specific MCPs (repeated flags)
-//! pais session -m github -m slack
+//! # Launch with specific MCPs
+//! pais session --mcp github,slack
 //!
-//! # Launch with specific skills
-//! pais session -s rust-coder -s otto
+//! # Use a named profile
+//! pais session --profile minimal
 //!
-//! # Combine MCPs and skills
-//! pais session -m github -s rust-coder -s otto
-//!
-//! # Use named profiles
-//! pais session --mcp-profile work --skill-profile dev
-//!
-//! # List available MCPs, skills, and profiles
+//! # List available MCPs and profiles
 //! pais session --list
 //! ```
 
@@ -49,46 +43,22 @@ struct McpServerInfo {
     source: String,
 }
 
-/// Information about an available skill
-#[derive(Debug, Clone, Serialize)]
-struct SkillInfo {
-    name: String,
-    description: String,
-}
-
-/// MCP-related options
-pub struct McpOptions {
-    pub servers: Option<Vec<String>>,
-    pub profile: Option<String>,
-}
-
-/// Skill-related options
-pub struct SkillOptions {
-    pub skills: Option<Vec<String>>,
-    pub profile: Option<String>,
-}
-
-/// Session command options
-pub struct SessionOptions {
-    pub mcp: McpOptions,
-    pub skill: SkillOptions,
-    pub list: bool,
-    pub dry_run: bool,
-    pub format: Option<OutputFormat>,
-    pub claude_args: Vec<String>,
-}
-
 /// Run the session command
-pub fn run(opts: SessionOptions, config: &Config) -> Result<()> {
-    if opts.list {
-        return list_all(OutputFormat::resolve(opts.format), config);
+pub fn run(
+    mcp: Option<Vec<String>>,
+    profile: Option<String>,
+    list: bool,
+    dry_run: bool,
+    format: Option<OutputFormat>,
+    claude_args: Vec<String>,
+    config: &Config,
+) -> Result<()> {
+    if list {
+        return list_mcps(OutputFormat::resolve(format), config);
     }
 
     // Determine which MCPs to load
-    let mcp_list = resolve_mcp_list(opts.mcp.servers, opts.mcp.profile, config)?;
-
-    // Determine which skills to load
-    let skill_list = resolve_skill_list(opts.skill.skills, opts.skill.profile, config)?;
+    let mcp_list = resolve_mcp_list(mcp, profile, config)?;
 
     // Build the MCP config JSON
     let (temp_path, server_count) = if mcp_list.is_empty() {
@@ -98,47 +68,40 @@ pub fn run(opts: SessionOptions, config: &Config) -> Result<()> {
         (Some(path), count)
     };
 
-    if opts.dry_run {
+    if dry_run {
         println!("{}", "Dry run - would launch Claude with:".yellow());
         println!(
             "  MCPs: {}",
             if mcp_list.is_empty() { "none".to_string() } else { mcp_list.join(", ") }
         );
-        println!("  MCP servers found: {}", server_count);
-        println!(
-            "  Skills: {}",
-            if skill_list.is_empty() { "(all)".to_string() } else { skill_list.join(", ") }
-        );
+        println!("  Servers found: {}", server_count);
         if let Some(ref path) = temp_path {
-            println!("  MCP config file: {}", path.display());
+            println!("  Config file: {}", path.display());
             if let Ok(content) = fs::read_to_string(path) {
-                println!("\n{}", "Generated MCP config:".dimmed());
+                println!("\n{}", "Generated config:".dimmed());
                 println!("{}", content);
             }
         }
-        if !skill_list.is_empty() {
-            println!("  PAIS_SKILLS env: {}", skill_list.join(","));
-        }
-        println!("  Extra args: {:?}", opts.claude_args);
+        println!("  Extra args: {:?}", claude_args);
         return Ok(());
     }
 
     // Build and exec claude command
-    launch_claude(temp_path, skill_list, opts.claude_args)
+    launch_claude(temp_path, claude_args)
 }
 
 /// Resolve which MCPs to load based on flags and config
-fn resolve_mcp_list(mcp: Option<Vec<String>>, mcp_profile: Option<String>, config: &Config) -> Result<Vec<String>> {
+fn resolve_mcp_list(mcp: Option<Vec<String>>, profile: Option<String>, config: &Config) -> Result<Vec<String>> {
     // Explicit --mcp flag takes precedence
     if let Some(mcps) = mcp {
         return Ok(mcps);
     }
 
-    // Then check for --mcp-profile
-    if let Some(profile_name) = mcp_profile {
+    // Then check for --profile
+    if let Some(profile_name) = profile {
         return config.mcp.profiles.get(&profile_name).cloned().ok_or_else(|| {
             eyre!(
-                "Unknown MCP profile '{}'. Use --list to see available profiles.",
+                "Unknown profile '{}'. Use --list to see available profiles.",
                 profile_name
             )
         });
@@ -154,90 +117,6 @@ fn resolve_mcp_list(mcp: Option<Vec<String>>, mcp_profile: Option<String>, confi
     // No MCPs specified - return empty (will use --strict-mcp-config with empty config)
     // This gives a "minimal" session with no MCPs
     Ok(vec![])
-}
-
-/// Resolve which skills to load based on flags and config
-fn resolve_skill_list(
-    skill: Option<Vec<String>>,
-    skill_profile: Option<String>,
-    config: &Config,
-) -> Result<Vec<String>> {
-    // Explicit --skill flag takes precedence
-    if let Some(skills) = skill {
-        return Ok(skills);
-    }
-
-    // Then check for --skill-profile
-    if let Some(profile_name) = skill_profile {
-        return config.skills.profiles.get(&profile_name).cloned().ok_or_else(|| {
-            eyre!(
-                "Unknown skill profile '{}'. Use --list to see available profiles.",
-                profile_name
-            )
-        });
-    }
-
-    // Then check for default profile
-    if let Some(ref default_name) = config.skills.default_profile
-        && let Some(skills) = config.skills.profiles.get(default_name)
-    {
-        return Ok(skills.clone());
-    }
-
-    // No skills specified - return empty (means "load all skills")
-    Ok(vec![])
-}
-
-/// Load all available skills from the skills directory
-fn load_all_skills(config: &Config) -> Vec<SkillInfo> {
-    let skills_dir = Config::expand_path(&config.paths.skills);
-
-    let mut skills = Vec::new();
-
-    if !skills_dir.exists() {
-        return skills;
-    }
-
-    if let Ok(entries) = fs::read_dir(&skills_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                let skill_md = path.join("SKILL.md");
-                if skill_md.exists() {
-                    let name = path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
-
-                    // Try to extract description from SKILL.md frontmatter
-                    let description = fs::read_to_string(&skill_md)
-                        .ok()
-                        .and_then(|content| extract_skill_description(&content))
-                        .unwrap_or_default();
-
-                    skills.push(SkillInfo { name, description });
-                }
-            }
-        }
-    }
-
-    skills.sort_by(|a, b| a.name.cmp(&b.name));
-    skills
-}
-
-/// Extract description from SKILL.md frontmatter
-fn extract_skill_description(content: &str) -> Option<String> {
-    // Look for YAML frontmatter
-    let stripped = content.strip_prefix("---")?;
-    let end = stripped.find("---")?;
-    let frontmatter = &stripped[..end];
-
-    for line in frontmatter.lines() {
-        if let Some(desc) = line.strip_prefix("description:") {
-            return Some(desc.trim().trim_matches('"').trim_matches('\'').to_string());
-        }
-    }
-    None
 }
 
 /// Load all available MCP servers from sources and config
@@ -324,8 +203,8 @@ fn build_mcp_config(mcp_list: &[String], config: &Config) -> Result<(PathBuf, us
     Ok((temp_file, count))
 }
 
-/// Launch Claude Code with the specified MCP and skill config
-fn launch_claude(mcp_config_path: Option<PathBuf>, skill_list: Vec<String>, extra_args: Vec<String>) -> Result<()> {
+/// Launch Claude Code with the specified MCP config
+fn launch_claude(mcp_config_path: Option<PathBuf>, extra_args: Vec<String>) -> Result<()> {
     let mut cmd = Command::new("claude");
 
     // Always use strict mode - only load what we specify
@@ -335,14 +214,6 @@ fn launch_claude(mcp_config_path: Option<PathBuf>, skill_list: Vec<String>, extr
     if let Some(ref path) = mcp_config_path {
         cmd.arg("--mcp-config");
         cmd.arg(path);
-    }
-
-    // Set PAIS_SKILLS env var for skill filtering
-    // Empty list means "load all skills" (no filtering)
-    if !skill_list.is_empty() {
-        let skills_env = skill_list.join(",");
-        cmd.env("PAIS_SKILLS", &skills_env);
-        log::info!("Setting PAIS_SKILLS={}", skills_env);
     }
 
     // Pass through any extra args
@@ -357,21 +228,17 @@ fn launch_claude(mcp_config_path: Option<PathBuf>, skill_list: Vec<String>, extr
     Err(eyre!("Failed to exec claude: {}", err))
 }
 
-/// List available MCPs, skills, and profiles
-fn list_all(format: OutputFormat, config: &Config) -> Result<()> {
+/// List available MCPs and profiles
+fn list_mcps(format: OutputFormat, config: &Config) -> Result<()> {
     let all_servers = load_all_mcp_servers(config);
-    let all_skills = load_all_skills(config);
 
     match format {
         OutputFormat::Json => {
             #[derive(Serialize)]
             struct ListOutput {
-                mcp_servers: Vec<McpServerInfo>,
-                mcp_profiles: HashMap<String, Vec<String>>,
-                mcp_default_profile: Option<String>,
-                skills: Vec<SkillInfo>,
-                skill_profiles: HashMap<String, Vec<String>>,
-                skill_default_profile: Option<String>,
+                servers: Vec<McpServerInfo>,
+                profiles: HashMap<String, Vec<String>>,
+                default_profile: Option<String>,
             }
 
             let servers: Vec<McpServerInfo> = all_servers
@@ -384,12 +251,9 @@ fn list_all(format: OutputFormat, config: &Config) -> Result<()> {
                 .collect();
 
             let output = ListOutput {
-                mcp_servers: servers,
-                mcp_profiles: config.mcp.profiles.clone(),
-                mcp_default_profile: config.mcp.default_profile.clone(),
-                skills: all_skills,
-                skill_profiles: config.skills.profiles.clone(),
-                skill_default_profile: config.skills.default_profile.clone(),
+                servers,
+                profiles: config.mcp.profiles.clone(),
+                default_profile: config.mcp.default_profile.clone(),
             };
 
             println!("{}", serde_json::to_string_pretty(&output)?);
@@ -397,12 +261,9 @@ fn list_all(format: OutputFormat, config: &Config) -> Result<()> {
         OutputFormat::Yaml => {
             #[derive(Serialize)]
             struct ListOutput {
-                mcp_servers: Vec<McpServerInfo>,
-                mcp_profiles: HashMap<String, Vec<String>>,
-                mcp_default_profile: Option<String>,
-                skills: Vec<SkillInfo>,
-                skill_profiles: HashMap<String, Vec<String>>,
-                skill_default_profile: Option<String>,
+                servers: Vec<McpServerInfo>,
+                profiles: HashMap<String, Vec<String>>,
+                default_profile: Option<String>,
             }
 
             let servers: Vec<McpServerInfo> = all_servers
@@ -415,21 +276,20 @@ fn list_all(format: OutputFormat, config: &Config) -> Result<()> {
                 .collect();
 
             let output = ListOutput {
-                mcp_servers: servers,
-                mcp_profiles: config.mcp.profiles.clone(),
-                mcp_default_profile: config.mcp.default_profile.clone(),
-                skills: all_skills,
-                skill_profiles: config.skills.profiles.clone(),
-                skill_default_profile: config.skills.default_profile.clone(),
+                servers,
+                profiles: config.mcp.profiles.clone(),
+                default_profile: config.mcp.default_profile.clone(),
             };
 
             println!("{}", serde_yaml::to_string(&output)?);
         }
         OutputFormat::Text => {
-            // MCP Servers section
-            println!("{}", "MCP Servers:".bold());
+            // Servers section
+            println!("{}", "Available MCP Servers:".bold());
             if all_servers.is_empty() {
                 println!("  {}", "(none found)".dimmed());
+                println!();
+                println!("  Add servers to ~/.mcp.json or configure in pais.yaml");
             } else {
                 let mut server_list: Vec<_> = all_servers.iter().collect();
                 server_list.sort_by_key(|(name, _)| name.as_str());
@@ -444,11 +304,13 @@ fn list_all(format: OutputFormat, config: &Config) -> Result<()> {
                 }
             }
 
-            // MCP Profiles section
+            // Profiles section
             println!();
-            println!("{}", "MCP Profiles:".bold());
+            println!("{}", "Profiles:".bold());
             if config.mcp.profiles.is_empty() {
                 println!("  {}", "(none defined)".dimmed());
+                println!();
+                println!("  Define profiles in pais.yaml under mcp.profiles");
             } else {
                 let mut profile_list: Vec<_> = config.mcp.profiles.iter().collect();
                 profile_list.sort_by_key(|(name, _)| name.as_str());
@@ -461,7 +323,7 @@ fn list_all(format: OutputFormat, config: &Config) -> Result<()> {
                     };
 
                     let server_str = if servers.is_empty() {
-                        "(none)".dimmed().to_string()
+                        "(no MCPs)".dimmed().to_string()
                     } else {
                         servers.join(", ")
                     };
@@ -470,62 +332,13 @@ fn list_all(format: OutputFormat, config: &Config) -> Result<()> {
                 }
             }
 
-            // Skills section
-            println!();
-            println!("{}", "Skills:".bold());
-            if all_skills.is_empty() {
-                println!("  {}", "(none found)".dimmed());
-            } else {
-                for skill in &all_skills {
-                    let desc = if skill.description.is_empty() {
-                        String::new()
-                    } else {
-                        // Truncate long descriptions
-                        let truncated = if skill.description.len() > 50 {
-                            format!("{}...", &skill.description[..47])
-                        } else {
-                            skill.description.clone()
-                        };
-                        format!(" - {}", truncated).dimmed().to_string()
-                    };
-                    println!("  {}{}", skill.name.cyan(), desc);
-                }
-            }
-
-            // Skill Profiles section
-            println!();
-            println!("{}", "Skill Profiles:".bold());
-            if config.skills.profiles.is_empty() {
-                println!("  {}", "(none defined)".dimmed());
-            } else {
-                let mut profile_list: Vec<_> = config.skills.profiles.iter().collect();
-                profile_list.sort_by_key(|(name, _)| name.as_str());
-
-                for (name, skills) in profile_list {
-                    let default_marker = if config.skills.default_profile.as_ref() == Some(name) {
-                        " (default)".green().to_string()
-                    } else {
-                        String::new()
-                    };
-
-                    let skill_str = if skills.is_empty() {
-                        "(none)".dimmed().to_string()
-                    } else {
-                        skills.join(", ")
-                    };
-
-                    println!("  {}{}: {}", name.yellow(), default_marker, skill_str);
-                }
-            }
-
             // Usage hints
             println!();
             println!("{}", "Usage:".bold());
-            println!("  pais session                         # Use default profiles");
-            println!("  pais session -m github -m slack      # Load specific MCPs");
-            println!("  pais session -s rust-coder -s otto   # Load specific skills");
-            println!("  pais session --mcp-profile work --skill-profile dev");
-            println!("  pais session --dry-run               # Show what would happen");
+            println!("  pais session                    # Use default profile or no MCPs");
+            println!("  pais session --profile minimal  # Use 'minimal' profile");
+            println!("  pais session --mcp github,slack # Load specific MCPs");
+            println!("  pais session --dry-run          # Show what would happen");
         }
     }
 
