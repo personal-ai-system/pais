@@ -59,21 +59,21 @@ jobs:
       - name: Package binary
         run: |
           mkdir -p artifacts/
-          cp target/${{ matrix.target }}/release/paii artifacts/
+          cp target/${{ matrix.target }}/release/pais artifacts/
 
       - name: Archive artifacts
-        run: tar -czvf paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz -C artifacts paii
+        run: tar -czvf pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz -C artifacts pais
 
       - name: Generate checksum
-        run: sha256sum paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz > paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz.sha256
+        run: sha256sum pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz > pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz.sha256
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: paii-${{ matrix.suffix }}
+          name: pais-${{ matrix.suffix }}
           path: |
-            paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz
-            paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz.sha256
+            pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz
+            pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz.sha256
 
   build-macos:
     runs-on: macos-14
@@ -113,21 +113,21 @@ jobs:
       - name: Package binary
         run: |
           mkdir -p artifacts/
-          cp target/${{ matrix.target }}/release/paii artifacts/
+          cp target/${{ matrix.target }}/release/pais artifacts/
 
       - name: Archive artifacts
-        run: tar -czvf paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz -C artifacts paii
+        run: tar -czvf pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz -C artifacts pais
 
       - name: Generate checksum
-        run: shasum -a 256 paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz > paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz.sha256
+        run: shasum -a 256 pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz > pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz.sha256
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: paii-${{ matrix.suffix }}
+          name: pais-${{ matrix.suffix }}
           path: |
-            paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz
-            paii-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz.sha256
+            pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz
+            pais-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz.sha256
 
   create-release:
     needs: [build-linux, build-macos]
