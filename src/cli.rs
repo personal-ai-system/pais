@@ -169,6 +169,33 @@ pub enum Commands {
         args: Vec<String>,
     },
 
+    /// Launch Claude Code with dynamic MCP configuration
+    Session {
+        /// MCP servers to load (comma-separated)
+        #[arg(short, long, value_delimiter = ',')]
+        mcp: Option<Vec<String>>,
+
+        /// Use a named MCP profile from pais.yaml
+        #[arg(short, long)]
+        profile: Option<String>,
+
+        /// List available MCPs and profiles
+        #[arg(short, long)]
+        list: bool,
+
+        /// Show what would happen without launching
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Output format for --list (default: text for TTY, json for pipes)
+        #[arg(long, short = 'o', value_enum)]
+        format: Option<OutputFormat>,
+
+        /// Additional arguments to pass to Claude
+        #[arg(last = true)]
+        claude_args: Vec<String>,
+    },
+
     /// Show system status
     Status {
         /// Output format (default: text for TTY, json for pipes)

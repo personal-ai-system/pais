@@ -42,6 +42,7 @@ pub struct Config {
     pub hooks: HooksConfig,
     pub observability: ObservabilityConfig,
     pub environment: EnvironmentConfig,
+    pub mcp: McpConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -100,6 +101,7 @@ impl Default for Config {
             hooks: HooksConfig::default(),
             observability: ObservabilityConfig::default(),
             environment: EnvironmentConfig::default(),
+            mcp: McpConfig::default(),
         }
     }
 }
@@ -165,6 +167,40 @@ pub struct ToolConfig {
 
     /// Custom install command (defaults to cargo install --git)
     pub install: Option<String>,
+}
+
+/// MCP (Model Context Protocol) server configuration
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct McpConfig {
+    /// Source files for MCP server definitions
+    /// First one found with the server will be used
+    pub sources: Vec<PathBuf>,
+
+    /// Named profiles mapping to lists of MCP server names
+    pub profiles: HashMap<String, Vec<String>>,
+
+    /// Default profile to use when none specified
+    pub default_profile: Option<String>,
+
+    /// Additional MCP server definitions (supplements sources)
+    pub servers: HashMap<String, McpServerConfig>,
+}
+
+/// Configuration for a single MCP server
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct McpServerConfig {
+    /// Command to run the MCP server
+    pub command: String,
+
+    /// Arguments to pass to the command
+    #[serde(default)]
+    pub args: Vec<String>,
+
+    /// Environment variables for the server
+    #[serde(default)]
+    pub env: HashMap<String, String>,
 }
 
 impl Config {

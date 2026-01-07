@@ -13,6 +13,7 @@ pub mod observe;
 pub mod plugin;
 pub mod run;
 pub mod security;
+pub mod session;
 pub mod skill;
 pub mod status;
 pub mod sync;
