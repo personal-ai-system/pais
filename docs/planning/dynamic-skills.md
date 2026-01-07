@@ -52,7 +52,7 @@ skills:
     research:
       - fabric
       - tech-researcher
-    minimal: []       # For skills: empty = load all (see "Empty List Semantics")
+    all: []           # For skills: empty = load all (see "Empty List Semantics")
 ```
 
 No separate `default-profile` field needed.
@@ -66,20 +66,16 @@ Empty profiles have different meanings for MCPs vs skills due to how they're con
 pais session -m minimal    # No MCPs loaded
 ```
 
-**Skills:** Empty list = load ALL skills (no whitelist = everything passes)
+**Skills:** Empty list = load ALL skills (all symlinks created)
 ```bash
-pais session -s all        # All skills loaded (empty whitelist = no filtering)
+pais session -s all        # All skills loaded
 ```
-
-This is because skills use a whitelist model:
-- Non-empty PAIS_SKILLS → only those skills load
-- Empty PAIS_SKILLS → no whitelist → all skills load
-
-> **Future consideration:** Could add explicit `"*"` sentinel to mean "all" if empty-list semantics prove confusing.
 
 ## Architecture
 
 ### MCP Flow
+
+MCPs use Claude Code's native `--mcp-config` flag:
 
 ```
 pais session -m github -m slack
@@ -106,6 +102,9 @@ exec claude --strict-mcp-config --mcp-config /tmp/pais-mcp-xxx.json
 
 ### Skills Flow
 
+Claude Code has NO native skill filtering - it loads all skills from `~/.claude/skills/`.
+We work around this by managing symlinks in that directory:
+
 ```
 pais session -s rust-coder -s otto
     │
@@ -114,39 +113,64 @@ pais session -s rust-coder -s otto
 │ session.rs                          │
 │ 1. Parse -s flags                   │
 │ 2. Expand any profile names         │
-│ 3. Set PAIS_SKILLS env var          │
-│    PAIS_SKILLS=rust-coder,otto      │
+│ 3. Sync symlinks in ~/.claude/skills│
+│    - Remove unwanted symlinks       │
+│    - Add missing symlinks           │
+│    - Leave common ones untouched    │
 └─────────────────────────────────────┘
     │
     ▼
-exec claude (env var inherited)
+exec claude
     │
     ▼
 ┌─────────────────────────────────────┐
 │ Claude Code                         │
-│ SessionStart hook fires             │
-│ Runs: pais hook dispatch session-start
-└─────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────┐
-│ pais context inject                 │
-│ 1. Read PAIS_SKILLS env var         │
-│ 2. Filter skills to only those      │
-│ 3. Output filtered context          │
+│ Loads skills from ~/.claude/skills/ │
+│ Only sees symlinks we created       │
 └─────────────────────────────────────┘
 ```
 
-### Why Different Transport?
+### Smart Symlink Sync
+
+The symlink management uses set comparison to minimize churn:
+
+```
+Current symlinks:  {rust-coder, fabric, youtube}
+Requested skills:  {rust-coder, otto, clone}
+
+Compute diff:
+  - to_remove: {fabric, youtube}     # current - requested
+  - to_add:    {otto, clone}         # requested - current
+  - unchanged: {rust-coder}          # intersection
+
+Only modify what's necessary:
+  - Remove fabric, youtube symlinks
+  - Create otto, clone symlinks
+  - Leave rust-coder untouched
+```
+
+This avoids unnecessary filesystem operations when skills overlap between sessions.
+
+### Why Different Approaches?
 
 | Aspect | MCP | Skills |
 |--------|-----|--------|
 | Flag | `-m` / `--mcp` | `-s` / `--skill` |
-| Transport | Temp JSON file | Environment variable |
-| Consumer | Claude's `--mcp-config` | Our `pais context inject` |
-| Reason | Claude reads the file | We control the injection |
+| Mechanism | Temp JSON file | Symlink management |
+| Consumer | Claude's `--mcp-config` | Claude's skill loader |
+| Reason | Claude has native support | Claude has NO native filtering |
 
-Environment variable survives the `exec()` call, allowing `pais session` to communicate with `pais context inject` across processes.
+Claude Code natively supports `--mcp-config` + `--strict-mcp-config` for MCPs.
+It has no equivalent for skills, so we manage symlinks instead.
+
+## Skill Sources
+
+Skills can come from two locations:
+
+1. **Dedicated skills:** `~/.config/pais/skills/<name>/SKILL.md`
+2. **Plugin skills:** `~/.config/pais/plugins/<name>/SKILL.md`
+
+When syncing, we check both locations to find skill source paths.
 
 ## Configuration
 
@@ -176,116 +200,81 @@ mcp:
 skills:
   profiles:
     dev:                  # First = default
+      - core
       - rust-coder
       - otto
       - clone
     research:
+      - core
       - fabric
       - tech-researcher
       - youtube
     writing:
+      - core
       - writing-researcher
       - fabric
-    minimal: []
+    all: []               # Empty = load all available skills
 ```
 
 ### Implementation Details
 
-#### Config structs (`config.rs`)
+#### Symlink sync logic (`session.rs`)
 
 ```rust
-use indexmap::IndexMap;
+/// Sync skill symlinks in ~/.claude/skills/ to match the requested skill list
+fn sync_skill_symlinks(skill_list: &[String], config: &Config) -> Result<SyncResult> {
+    let claude_skills_dir = get_claude_skills_dir()?;
 
-/// MCP configuration
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct McpConfig {
-    pub sources: Vec<PathBuf>,
-    pub profiles: IndexMap<String, Vec<String>>,  // Ordered!
-    pub servers: HashMap<String, McpServerConfig>,
-}
+    // Get current state
+    let current_symlinks = get_current_symlinks(&claude_skills_dir);
+    let current_names: HashSet<String> = current_symlinks.keys().cloned().collect();
 
-/// Skills configuration
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct SkillsConfig {
-    pub profiles: IndexMap<String, Vec<String>>,  // Ordered!
-}
-```
-
-#### CLI flags (`cli.rs`)
-
-```rust
-Session {
-    /// MCP servers or profiles to load (comma-separated)
-    #[arg(short, long, value_delimiter = ',')]
-    mcp: Option<Vec<String>>,
-
-    /// Skills or profiles to load (comma-separated)
-    #[arg(short, long, value_delimiter = ',')]
-    skill: Option<Vec<String>>,
-
-    #[arg(short, long)]
-    list: bool,
-
-    #[arg(long)]
-    dry_run: bool,
-
-    // ...
-}
-```
-
-#### Resolution logic (`session.rs`)
-
-```rust
-/// Expand a list of names, replacing profile names with their contents
-fn expand_names(
-    names: &[String],
-    profiles: &IndexMap<String, Vec<String>>,
-) -> Vec<String> {
-    let mut result = Vec::new();
-    for name in names {
-        if let Some(profile_contents) = profiles.get(name) {
-            // It's a profile - expand it
-            result.extend(profile_contents.iter().cloned());
-        } else {
-            // It's a direct name
-            result.push(name.clone());
-        }
-    }
-    // Deduplicate while preserving order
-    let mut seen = HashSet::new();
-    result.retain(|x| seen.insert(x.clone()));
-    result
-}
-
-/// Get default from first profile (if any)
-fn get_default(profiles: &IndexMap<String, Vec<String>>) -> Vec<String> {
-    profiles.values().next().cloned().unwrap_or_default()
-}
-```
-
-#### Context filtering (`context.rs`)
-
-```rust
-fn inject_context(raw: bool, config: &Config) -> Result<()> {
-    // Read skill filter from environment
-    let skill_filter: Option<HashSet<String>> = std::env::var("PAIS_SKILLS")
-        .ok()
-        .filter(|s| !s.is_empty())
-        .map(|s| s.split(',').map(String::from).collect());
-
-    // Filter skills based on PAIS_SKILLS
-    let core_skills = if let Some(ref filter) = skill_filter {
-        load_core_skills(&skills_dir, &index)
-            .into_iter()
-            .filter(|(name, _)| filter.contains(name))
-            .collect()
+    // Determine requested skills (empty list = all available)
+    let requested_names: HashSet<String> = if skill_list.is_empty() {
+        get_all_skill_names(config)
     } else {
-        load_core_skills(&skills_dir, &index)
+        skill_list.iter().cloned().collect()
     };
 
-    // Similar filtering for deferred skills...
+    // Compute diff
+    let to_remove = current_names.difference(&requested_names);
+    let to_add = requested_names.difference(&current_names);
+    let unchanged = current_names.intersection(&requested_names);
+
+    // Apply changes
+    for name in to_remove {
+        fs::remove_file(claude_skills_dir.join(name))?;
+    }
+    for name in to_add {
+        if let Some(source) = find_skill_source(name, config) {
+            unix_fs::symlink(&source, claude_skills_dir.join(name))?;
+        }
+    }
+
+    Ok(SyncResult { added, removed, unchanged, not_found })
+}
+```
+
+#### Context injection (`context.rs`)
+
+Context injection reads from `~/.claude/skills/` symlinks to know which skills to include:
+
+```rust
+fn get_skill_filter() -> Option<HashSet<String>> {
+    let claude_skills_dir = home_dir()?.join(".claude").join("skills");
+
+    if !claude_skills_dir.exists() {
+        return None;  // No filtering
+    }
+
+    let symlinks: HashSet<String> = read_dir(&claude_skills_dir)
+        .ok()?
+        .flatten()
+        .filter(|e| e.path().is_symlink())
+        .filter_map(|e| e.file_name().to_str().map(String::from))
+        .collect();
+
+    if symlinks.is_empty() { None } else { Some(symlinks) }
 }
 ```
 
@@ -294,9 +283,6 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
 ```bash
 # Default session (uses first profile for both MCP and skills)
 pais session
-
-# Minimal session (nothing loaded)
-pais session -m minimal -s minimal
 
 # Development session
 pais session -s dev                    # profile
@@ -308,11 +294,30 @@ pais session -m work -s research
 # Mix profiles and individuals
 pais session -s dev -s fabric          # dev profile + fabric skill
 
+# Load all skills (empty profile)
+pais session -s all
+
 # List everything available
 pais session --list
 
 # Preview without launching
 pais session -m work -s dev --dry-run
+```
+
+### Dry Run Output
+
+```
+Dry run - would launch Claude with:
+  MCPs: multi-account-github, slack
+  MCP servers found: 2
+  Skills: core, rust-coder, otto, clone
+
+Skill symlink changes:
+  - fabric
+  - youtube
+  + clone
+  Unchanged: 3
+  Extra args: []
 ```
 
 ## Benefits
@@ -322,6 +327,7 @@ pais session -m work -s dev --dry-run
 3. **Focused sessions** — Avoid skill confusion/overlap
 4. **Simple mental model** — Profiles and names are interchangeable
 5. **Sensible defaults** — First profile = default, no extra config
+6. **Minimal churn** — Smart sync only changes what's needed
 
 ## Future Considerations
 

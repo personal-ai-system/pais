@@ -3,6 +3,25 @@
 //! This module provides `pais session` which wraps Claude Code startup,
 //! allowing selective MCP server and skill loading to reduce context token usage.
 //!
+//! ## How It Works
+//!
+//! ### MCP Filtering
+//! Claude Code supports `--mcp-config` and `--strict-mcp-config` flags natively.
+//! We generate a temporary MCP config file with only the requested servers.
+//!
+//! ### Skill Filtering
+//! Claude Code has NO native skill filtering - it loads all skills from `~/.claude/skills/`.
+//! We work around this by managing symlinks in that directory:
+//!
+//! 1. Read current symlinks in `~/.claude/skills/`
+//! 2. Compute requested skills from profile/flags
+//! 3. Diff: remove symlinks not in requested set, add symlinks that are missing
+//! 4. This avoids unnecessary churn - symlinks common to both sets are untouched
+//!
+//! Skills are sourced from:
+//! - `~/.config/pais/skills/<name>/` (dedicated skills)
+//! - `~/.config/pais/plugins/<name>/` (plugins with SKILL.md)
+//!
 //! ## Usage
 //!
 //! ```bash
@@ -27,6 +46,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::os::unix::fs as unix_fs;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
@@ -86,6 +106,9 @@ pub fn run(
         (Some(path), count)
     };
 
+    // Sync skill symlinks in ~/.claude/skills/
+    let sync_result = sync_skill_symlinks(&skill_list, config)?;
+
     if dry_run {
         println!("{}", "Dry run - would launch Claude with:".yellow());
         println!(
@@ -95,28 +118,213 @@ pub fn run(
         println!("  MCP servers found: {}", server_count);
         println!(
             "  Skills: {}",
-            if skill_list.is_empty() {
-                "all (no filter)".to_string()
-            } else {
-                skill_list.join(", ")
-            }
+            if skill_list.is_empty() { "all".to_string() } else { skill_list.join(", ") }
         );
+        println!();
+        println!("{}", "Skill symlink changes:".bold());
+        if sync_result.added.is_empty() && sync_result.removed.is_empty() {
+            println!("  {}", "(no changes needed)".dimmed());
+        } else {
+            for name in &sync_result.removed {
+                println!("  {} {}", "-".red(), name);
+            }
+            for name in &sync_result.added {
+                println!("  {} {}", "+".green(), name);
+            }
+        }
+        println!("  Unchanged: {}", sync_result.unchanged.len());
         if let Some(ref path) = temp_path {
+            println!();
             println!("  MCP config file: {}", path.display());
             if let Ok(content) = fs::read_to_string(path) {
                 println!("\n{}", "Generated MCP config:".dimmed());
                 println!("{}", content);
             }
         }
-        if !skill_list.is_empty() {
-            println!("  PAIS_SKILLS: {}", skill_list.join(","));
-        }
         println!("  Extra args: {:?}", claude_args);
         return Ok(());
     }
 
+    // Log what we did
+    if !sync_result.added.is_empty() || !sync_result.removed.is_empty() {
+        log::info!(
+            "Synced skill symlinks: +{} -{} (unchanged: {})",
+            sync_result.added.len(),
+            sync_result.removed.len(),
+            sync_result.unchanged.len()
+        );
+    }
+
     // Build and exec claude command
-    launch_claude(temp_path, skill_list, claude_args)
+    launch_claude(temp_path, claude_args)
+}
+
+/// Result of syncing skill symlinks
+#[derive(Debug, Default)]
+struct SyncResult {
+    added: Vec<String>,
+    removed: Vec<String>,
+    unchanged: Vec<String>,
+    not_found: Vec<String>,
+}
+
+/// Get Claude Code's skills directory (~/.claude/skills/)
+fn get_claude_skills_dir() -> Result<PathBuf> {
+    let home = dirs::home_dir().ok_or_else(|| eyre!("Could not determine home directory"))?;
+    Ok(home.join(".claude").join("skills"))
+}
+
+/// Find the source path for a skill (checks skills dir, then plugins dir)
+/// Returns None if skill doesn't exist in either location
+fn find_skill_source(name: &str, config: &Config) -> Option<PathBuf> {
+    // Check dedicated skills directory first
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    let skill_path = skills_dir.join(name);
+    if skill_path.exists() && skill_path.join("SKILL.md").exists() {
+        return Some(skill_path);
+    }
+
+    // Check plugins directory (plugins can have SKILL.md too)
+    let plugins_dir = Config::expand_path(&config.paths.plugins);
+    let plugin_path = plugins_dir.join(name);
+    if plugin_path.exists() && plugin_path.join("SKILL.md").exists() {
+        return Some(plugin_path);
+    }
+
+    None
+}
+
+/// Get all available skill names from both skills and plugins directories
+fn get_all_skill_names(config: &Config) -> HashSet<String> {
+    let mut names = HashSet::new();
+
+    // From skills directory
+    let skills_dir = Config::expand_path(&config.paths.skills);
+    if let Ok(entries) = fs::read_dir(&skills_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir()
+                && path.join("SKILL.md").exists()
+                && let Some(name) = path.file_name().and_then(|n| n.to_str())
+            {
+                names.insert(name.to_string());
+            }
+        }
+    }
+
+    // From plugins directory
+    let plugins_dir = Config::expand_path(&config.paths.plugins);
+    if let Ok(entries) = fs::read_dir(&plugins_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir()
+                && path.join("SKILL.md").exists()
+                && let Some(name) = path.file_name().and_then(|n| n.to_str())
+            {
+                names.insert(name.to_string());
+            }
+        }
+    }
+
+    names
+}
+
+/// Get current skill symlinks in Claude's skills directory
+/// Returns a map of symlink name -> target path
+fn get_current_symlinks(claude_skills_dir: &PathBuf) -> HashMap<String, PathBuf> {
+    let mut symlinks = HashMap::new();
+
+    if let Ok(entries) = fs::read_dir(claude_skills_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            // Only consider symlinks, skip regular files like README.md
+            if path.is_symlink()
+                && let Some(name) = path.file_name().and_then(|n| n.to_str())
+                && let Ok(target) = fs::read_link(&path)
+            {
+                symlinks.insert(name.to_string(), target);
+            }
+        }
+    }
+
+    symlinks
+}
+
+/// Sync skill symlinks in ~/.claude/skills/ to match the requested skill list
+///
+/// This performs a smart diff:
+/// - Symlinks for skills not in the requested list are removed
+/// - Symlinks for skills in the requested list but not present are added
+/// - Symlinks that already exist and are in the requested list are left alone
+///
+/// If skill_list is empty, this loads ALL available skills (no filtering).
+fn sync_skill_symlinks(skill_list: &[String], config: &Config) -> Result<SyncResult> {
+    let claude_skills_dir = get_claude_skills_dir()?;
+
+    // Ensure the directory exists
+    fs::create_dir_all(&claude_skills_dir).context("Failed to create ~/.claude/skills/")?;
+
+    // Get current state
+    let current_symlinks = get_current_symlinks(&claude_skills_dir);
+    let current_names: HashSet<String> = current_symlinks.keys().cloned().collect();
+
+    // Determine requested skills
+    let requested_names: HashSet<String> = if skill_list.is_empty() {
+        // Empty list = load all available skills
+        get_all_skill_names(config)
+    } else {
+        skill_list.iter().cloned().collect()
+    };
+
+    // Compute diff
+    let to_remove: HashSet<_> = current_names.difference(&requested_names).cloned().collect();
+    let to_add: HashSet<_> = requested_names.difference(&current_names).cloned().collect();
+    let unchanged: HashSet<_> = current_names.intersection(&requested_names).cloned().collect();
+
+    let mut result = SyncResult {
+        unchanged: unchanged.into_iter().collect(),
+        ..Default::default()
+    };
+
+    // Remove symlinks that shouldn't be there
+    for name in &to_remove {
+        let symlink_path = claude_skills_dir.join(name);
+        if let Err(e) = fs::remove_file(&symlink_path) {
+            log::warn!("Failed to remove symlink {}: {}", symlink_path.display(), e);
+        } else {
+            log::debug!("Removed skill symlink: {}", name);
+            result.removed.push(name.clone());
+        }
+    }
+
+    // Add symlinks that should be there
+    for name in &to_add {
+        if let Some(source_path) = find_skill_source(name, config) {
+            let symlink_path = claude_skills_dir.join(name);
+            if let Err(e) = unix_fs::symlink(&source_path, &symlink_path) {
+                log::warn!(
+                    "Failed to create symlink {} -> {}: {}",
+                    symlink_path.display(),
+                    source_path.display(),
+                    e
+                );
+            } else {
+                log::debug!("Created skill symlink: {} -> {}", name, source_path.display());
+                result.added.push(name.clone());
+            }
+        } else {
+            log::warn!("Skill not found: {}", name);
+            result.not_found.push(name.clone());
+        }
+    }
+
+    // Sort for consistent output
+    result.added.sort();
+    result.removed.sort();
+    result.unchanged.sort();
+    result.not_found.sort();
+
+    Ok(result)
 }
 
 /// Expand a list of names, replacing profile names with their contents
@@ -235,8 +443,11 @@ fn build_mcp_config(mcp_list: &[String], config: &Config) -> Result<(PathBuf, us
     Ok((temp_file, count))
 }
 
-/// Launch Claude Code with the specified MCP config and skill filter
-fn launch_claude(mcp_config_path: Option<PathBuf>, skill_list: Vec<String>, extra_args: Vec<String>) -> Result<()> {
+/// Launch Claude Code with the specified MCP config
+///
+/// Skill filtering is handled by sync_skill_symlinks() before this is called -
+/// Claude Code loads whatever symlinks exist in ~/.claude/skills/.
+fn launch_claude(mcp_config_path: Option<PathBuf>, extra_args: Vec<String>) -> Result<()> {
     let mut cmd = Command::new("claude");
 
     // Always use strict mode - only load what we specify
@@ -248,20 +459,10 @@ fn launch_claude(mcp_config_path: Option<PathBuf>, skill_list: Vec<String>, extr
         cmd.arg(path);
     }
 
-    // Set skill filter via environment variable
-    // Empty list means "no filter" (load all skills)
-    // Non-empty list means "only these skills"
-    if !skill_list.is_empty() {
-        cmd.env("PAIS_SKILLS", skill_list.join(","));
-    }
-
     // Pass through any extra args
     cmd.args(&extra_args);
 
     log::info!("Launching Claude with args: {:?}", cmd.get_args().collect::<Vec<_>>());
-    if !skill_list.is_empty() {
-        log::info!("PAIS_SKILLS={}", skill_list.join(","));
-    }
 
     // exec() replaces this process with claude
     // This never returns on success
@@ -715,5 +916,579 @@ mod tests {
         // No flags → uses first profile (minimal = empty)
         let result = resolve_list(None, &profiles);
         assert!(result.is_empty());
+    }
+
+    // === Symlink management tests ===
+    //
+    // These tests use isolated temp directories to avoid:
+    // - Interfering with real ~/.claude/skills/
+    // - Race conditions between parallel tests
+    // - Leftover state from failed tests
+
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use tempfile::TempDir;
+
+    /// Atomic counter for unique test directory names
+    static TEST_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    /// Create an isolated test environment with:
+    /// - A temp "claude skills" directory (simulates ~/.claude/skills/)
+    /// - A temp "pais skills" directory (simulates ~/.config/pais/skills/)
+    /// - A temp "pais plugins" directory (simulates ~/.config/pais/plugins/)
+    struct TestEnv {
+        _temp_dir: TempDir, // Holds the temp dir alive
+        claude_skills_dir: PathBuf,
+        pais_skills_dir: PathBuf,
+        pais_plugins_dir: PathBuf,
+    }
+
+    impl TestEnv {
+        fn new() -> Self {
+            let id = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+            let temp_dir = TempDir::with_prefix(format!("pais-test-{}-", id)).unwrap();
+            let base = temp_dir.path();
+
+            let claude_skills_dir = base.join("claude-skills");
+            let pais_skills_dir = base.join("pais-skills");
+            let pais_plugins_dir = base.join("pais-plugins");
+
+            fs::create_dir_all(&claude_skills_dir).unwrap();
+            fs::create_dir_all(&pais_skills_dir).unwrap();
+            fs::create_dir_all(&pais_plugins_dir).unwrap();
+
+            TestEnv {
+                _temp_dir: temp_dir,
+                claude_skills_dir,
+                pais_skills_dir,
+                pais_plugins_dir,
+            }
+        }
+
+        /// Create a skill in the pais skills directory
+        fn create_skill(&self, name: &str) -> PathBuf {
+            let skill_dir = self.pais_skills_dir.join(name);
+            fs::create_dir_all(&skill_dir).unwrap();
+            fs::write(skill_dir.join("SKILL.md"), format!("# {}\nTest skill", name)).unwrap();
+            skill_dir
+        }
+
+        /// Create a plugin skill in the pais plugins directory
+        fn create_plugin_skill(&self, name: &str) -> PathBuf {
+            let plugin_dir = self.pais_plugins_dir.join(name);
+            fs::create_dir_all(&plugin_dir).unwrap();
+            fs::write(plugin_dir.join("SKILL.md"), format!("# {}\nTest plugin skill", name)).unwrap();
+            plugin_dir
+        }
+
+        /// Create a symlink in the claude skills directory
+        fn create_symlink(&self, name: &str, target: &PathBuf) {
+            let link_path = self.claude_skills_dir.join(name);
+            unix_fs::symlink(target, &link_path).unwrap();
+        }
+
+        /// Create a regular file (not a symlink) in claude skills directory
+        fn create_regular_file(&self, name: &str, content: &str) {
+            let file_path = self.claude_skills_dir.join(name);
+            fs::write(&file_path, content).unwrap();
+        }
+
+        /// List symlinks in claude skills directory
+        fn list_symlinks(&self) -> Vec<String> {
+            let mut names: Vec<String> = fs::read_dir(&self.claude_skills_dir)
+                .unwrap()
+                .flatten()
+                .filter(|e| e.path().is_symlink())
+                .filter_map(|e| e.file_name().to_str().map(String::from))
+                .collect();
+            names.sort();
+            names
+        }
+
+        /// List all files (including non-symlinks) in claude skills directory
+        fn list_all_files(&self) -> Vec<String> {
+            let mut names: Vec<String> = fs::read_dir(&self.claude_skills_dir)
+                .unwrap()
+                .flatten()
+                .filter_map(|e| e.file_name().to_str().map(String::from))
+                .collect();
+            names.sort();
+            names
+        }
+    }
+
+    #[test]
+    fn test_get_current_symlinks_empty_directory() {
+        let env = TestEnv::new();
+        let result = get_current_symlinks(&env.claude_skills_dir);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_get_current_symlinks_with_symlinks() {
+        let env = TestEnv::new();
+
+        // Create skills and symlinks
+        let rust_coder = env.create_skill("rust-coder");
+        let otto = env.create_skill("otto");
+        env.create_symlink("rust-coder", &rust_coder);
+        env.create_symlink("otto", &otto);
+
+        let result = get_current_symlinks(&env.claude_skills_dir);
+        assert_eq!(result.len(), 2);
+        assert!(result.contains_key("rust-coder"));
+        assert!(result.contains_key("otto"));
+    }
+
+    #[test]
+    fn test_get_current_symlinks_ignores_regular_files() {
+        let env = TestEnv::new();
+
+        // Create a symlink
+        let rust_coder = env.create_skill("rust-coder");
+        env.create_symlink("rust-coder", &rust_coder);
+
+        // Create a regular file (should be ignored)
+        env.create_regular_file("README.md", "# Skills\nThis is a readme.");
+
+        let result = get_current_symlinks(&env.claude_skills_dir);
+        assert_eq!(result.len(), 1);
+        assert!(result.contains_key("rust-coder"));
+        assert!(!result.contains_key("README.md"));
+    }
+
+    #[test]
+    fn test_get_current_symlinks_nonexistent_directory() {
+        let env = TestEnv::new();
+        let nonexistent = env.claude_skills_dir.join("does-not-exist");
+        let result = get_current_symlinks(&nonexistent);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_find_skill_source_in_skills_dir() {
+        let env = TestEnv::new();
+        env.create_skill("rust-coder");
+
+        // Create a mock config pointing to our test directories
+        let config = create_test_config(&env);
+
+        let result = find_skill_source("rust-coder", &config);
+        assert!(result.is_some());
+        assert!(result.unwrap().ends_with("rust-coder"));
+    }
+
+    #[test]
+    fn test_find_skill_source_in_plugins_dir() {
+        let env = TestEnv::new();
+        env.create_plugin_skill("fabric");
+
+        let config = create_test_config(&env);
+
+        let result = find_skill_source("fabric", &config);
+        assert!(result.is_some());
+        assert!(result.unwrap().ends_with("fabric"));
+    }
+
+    #[test]
+    fn test_find_skill_source_prefers_skills_over_plugins() {
+        let env = TestEnv::new();
+        // Create same skill in both directories
+        env.create_skill("otto");
+        env.create_plugin_skill("otto");
+
+        let config = create_test_config(&env);
+
+        let result = find_skill_source("otto", &config);
+        assert!(result.is_some());
+        // Should find the one in skills dir (checked first)
+        let path = result.unwrap();
+        assert!(path.to_string_lossy().contains("pais-skills"));
+    }
+
+    #[test]
+    fn test_find_skill_source_not_found() {
+        let env = TestEnv::new();
+        let config = create_test_config(&env);
+
+        let result = find_skill_source("nonexistent-skill", &config);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_find_skill_source_requires_skill_md() {
+        let env = TestEnv::new();
+        // Create directory without SKILL.md
+        let skill_dir = env.pais_skills_dir.join("incomplete-skill");
+        fs::create_dir_all(&skill_dir).unwrap();
+        // No SKILL.md file!
+
+        let config = create_test_config(&env);
+
+        let result = find_skill_source("incomplete-skill", &config);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_get_all_skill_names_empty() {
+        let env = TestEnv::new();
+        let config = create_test_config(&env);
+
+        let result = get_all_skill_names(&config);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_get_all_skill_names_from_skills_dir() {
+        let env = TestEnv::new();
+        env.create_skill("rust-coder");
+        env.create_skill("otto");
+
+        let config = create_test_config(&env);
+
+        let result = get_all_skill_names(&config);
+        assert_eq!(result.len(), 2);
+        assert!(result.contains("rust-coder"));
+        assert!(result.contains("otto"));
+    }
+
+    #[test]
+    fn test_get_all_skill_names_from_plugins_dir() {
+        let env = TestEnv::new();
+        env.create_plugin_skill("fabric");
+        env.create_plugin_skill("youtube");
+
+        let config = create_test_config(&env);
+
+        let result = get_all_skill_names(&config);
+        assert_eq!(result.len(), 2);
+        assert!(result.contains("fabric"));
+        assert!(result.contains("youtube"));
+    }
+
+    #[test]
+    fn test_get_all_skill_names_combined() {
+        let env = TestEnv::new();
+        env.create_skill("rust-coder");
+        env.create_skill("otto");
+        env.create_plugin_skill("fabric");
+
+        let config = create_test_config(&env);
+
+        let result = get_all_skill_names(&config);
+        assert_eq!(result.len(), 3);
+        assert!(result.contains("rust-coder"));
+        assert!(result.contains("otto"));
+        assert!(result.contains("fabric"));
+    }
+
+    #[test]
+    fn test_get_all_skill_names_deduplicates() {
+        let env = TestEnv::new();
+        // Same skill in both directories
+        env.create_skill("otto");
+        env.create_plugin_skill("otto");
+
+        let config = create_test_config(&env);
+
+        let result = get_all_skill_names(&config);
+        assert_eq!(result.len(), 1);
+        assert!(result.contains("otto"));
+    }
+
+    #[test]
+    fn test_sync_symlinks_add_new_skills() {
+        let env = TestEnv::new();
+        env.create_skill("rust-coder");
+        env.create_skill("otto");
+
+        let config = create_test_config(&env);
+
+        // Sync with requested skills
+        let result = sync_skill_symlinks_with_dir(
+            &["rust-coder".to_string(), "otto".to_string()],
+            &config,
+            &env.claude_skills_dir,
+        )
+        .unwrap();
+
+        assert_eq!(result.added.len(), 2);
+        assert!(result.removed.is_empty());
+        assert!(result.unchanged.is_empty());
+        assert!(result.not_found.is_empty());
+
+        // Verify symlinks were created
+        let symlinks = env.list_symlinks();
+        assert_eq!(symlinks, vec!["otto", "rust-coder"]);
+    }
+
+    #[test]
+    fn test_sync_symlinks_remove_unwanted_skills() {
+        let env = TestEnv::new();
+        let rust_coder = env.create_skill("rust-coder");
+        let otto = env.create_skill("otto");
+        let fabric = env.create_skill("fabric");
+
+        // Pre-create symlinks for all three
+        env.create_symlink("rust-coder", &rust_coder);
+        env.create_symlink("otto", &otto);
+        env.create_symlink("fabric", &fabric);
+
+        let config = create_test_config(&env);
+
+        // Sync with only rust-coder requested
+        let result =
+            sync_skill_symlinks_with_dir(&["rust-coder".to_string()], &config, &env.claude_skills_dir).unwrap();
+
+        assert!(result.added.is_empty());
+        assert_eq!(result.removed.len(), 2);
+        assert!(result.removed.contains(&"otto".to_string()));
+        assert!(result.removed.contains(&"fabric".to_string()));
+        assert_eq!(result.unchanged, vec!["rust-coder"]);
+
+        // Verify only rust-coder remains
+        let symlinks = env.list_symlinks();
+        assert_eq!(symlinks, vec!["rust-coder"]);
+    }
+
+    #[test]
+    fn test_sync_symlinks_leaves_unchanged() {
+        let env = TestEnv::new();
+        let rust_coder = env.create_skill("rust-coder");
+        let otto = env.create_skill("otto");
+
+        // Pre-create symlinks
+        env.create_symlink("rust-coder", &rust_coder);
+        env.create_symlink("otto", &otto);
+
+        let config = create_test_config(&env);
+
+        // Sync with same skills
+        let result = sync_skill_symlinks_with_dir(
+            &["rust-coder".to_string(), "otto".to_string()],
+            &config,
+            &env.claude_skills_dir,
+        )
+        .unwrap();
+
+        assert!(result.added.is_empty());
+        assert!(result.removed.is_empty());
+        assert_eq!(result.unchanged.len(), 2);
+
+        // Symlinks should still exist
+        let symlinks = env.list_symlinks();
+        assert_eq!(symlinks, vec!["otto", "rust-coder"]);
+    }
+
+    #[test]
+    fn test_sync_symlinks_mixed_add_remove_unchanged() {
+        let env = TestEnv::new();
+        let rust_coder = env.create_skill("rust-coder");
+        let otto = env.create_skill("otto");
+        let fabric = env.create_skill("fabric");
+        env.create_skill("clone");
+
+        // Start with rust-coder and otto
+        env.create_symlink("rust-coder", &rust_coder);
+        env.create_symlink("otto", &otto);
+        env.create_symlink("fabric", &fabric);
+
+        let config = create_test_config(&env);
+
+        // Request rust-coder (keep), clone (add), remove otto and fabric
+        let result = sync_skill_symlinks_with_dir(
+            &["rust-coder".to_string(), "clone".to_string()],
+            &config,
+            &env.claude_skills_dir,
+        )
+        .unwrap();
+
+        assert_eq!(result.added, vec!["clone"]);
+        assert!(result.removed.contains(&"fabric".to_string()));
+        assert!(result.removed.contains(&"otto".to_string()));
+        assert_eq!(result.removed.len(), 2);
+        assert_eq!(result.unchanged, vec!["rust-coder"]);
+
+        // Verify final state
+        let symlinks = env.list_symlinks();
+        assert_eq!(symlinks, vec!["clone", "rust-coder"]);
+    }
+
+    #[test]
+    fn test_sync_symlinks_handles_not_found() {
+        let env = TestEnv::new();
+        env.create_skill("rust-coder");
+        // "nonexistent" skill does NOT exist
+
+        let config = create_test_config(&env);
+
+        let result = sync_skill_symlinks_with_dir(
+            &["rust-coder".to_string(), "nonexistent".to_string()],
+            &config,
+            &env.claude_skills_dir,
+        )
+        .unwrap();
+
+        assert_eq!(result.added, vec!["rust-coder"]);
+        assert_eq!(result.not_found, vec!["nonexistent"]);
+
+        // Only rust-coder should be created
+        let symlinks = env.list_symlinks();
+        assert_eq!(symlinks, vec!["rust-coder"]);
+    }
+
+    #[test]
+    fn test_sync_symlinks_empty_list_loads_all() {
+        let env = TestEnv::new();
+        env.create_skill("rust-coder");
+        env.create_skill("otto");
+        env.create_plugin_skill("fabric");
+
+        let config = create_test_config(&env);
+
+        // Empty list = load all available
+        let result = sync_skill_symlinks_with_dir(&[], &config, &env.claude_skills_dir).unwrap();
+
+        assert_eq!(result.added.len(), 3);
+        assert!(result.removed.is_empty());
+
+        let symlinks = env.list_symlinks();
+        assert_eq!(symlinks, vec!["fabric", "otto", "rust-coder"]);
+    }
+
+    #[test]
+    fn test_sync_symlinks_preserves_regular_files() {
+        let env = TestEnv::new();
+        env.create_skill("rust-coder");
+
+        // Create a regular file that should NOT be touched
+        env.create_regular_file("README.md", "# Skills");
+
+        let config = create_test_config(&env);
+
+        let result =
+            sync_skill_symlinks_with_dir(&["rust-coder".to_string()], &config, &env.claude_skills_dir).unwrap();
+
+        assert_eq!(result.added, vec!["rust-coder"]);
+
+        // Both should exist - README.md should not be removed
+        let all_files = env.list_all_files();
+        assert!(all_files.contains(&"README.md".to_string()));
+        assert!(all_files.contains(&"rust-coder".to_string()));
+    }
+
+    #[test]
+    fn test_sync_symlinks_creates_directory_if_needed() {
+        let env = TestEnv::new();
+        env.create_skill("rust-coder");
+
+        // Remove the claude skills directory
+        fs::remove_dir_all(&env.claude_skills_dir).unwrap();
+        assert!(!env.claude_skills_dir.exists());
+
+        let config = create_test_config(&env);
+
+        // This should create the directory
+        let result =
+            sync_skill_symlinks_with_dir(&["rust-coder".to_string()], &config, &env.claude_skills_dir).unwrap();
+
+        assert!(env.claude_skills_dir.exists());
+        assert_eq!(result.added, vec!["rust-coder"]);
+    }
+
+    #[test]
+    fn test_sync_symlinks_results_are_sorted() {
+        let env = TestEnv::new();
+        env.create_skill("zebra");
+        env.create_skill("apple");
+        env.create_skill("mango");
+
+        let config = create_test_config(&env);
+
+        let result = sync_skill_symlinks_with_dir(
+            &["zebra".to_string(), "apple".to_string(), "mango".to_string()],
+            &config,
+            &env.claude_skills_dir,
+        )
+        .unwrap();
+
+        // Results should be sorted alphabetically
+        assert_eq!(result.added, vec!["apple", "mango", "zebra"]);
+    }
+
+    /// Helper: create a test config pointing to the test environment's directories
+    fn create_test_config(env: &TestEnv) -> Config {
+        let mut config = Config::default();
+        config.paths.skills = env.pais_skills_dir.clone();
+        config.paths.plugins = env.pais_plugins_dir.clone();
+        config
+    }
+
+    /// Test-friendly version of sync_skill_symlinks that takes the target dir as a parameter
+    /// (the real function uses ~/.claude/skills/ which we can't override)
+    fn sync_skill_symlinks_with_dir(
+        skill_list: &[String],
+        config: &Config,
+        claude_skills_dir: &PathBuf,
+    ) -> eyre::Result<SyncResult> {
+        // Ensure the directory exists
+        fs::create_dir_all(claude_skills_dir).context("Failed to create skills directory")?;
+
+        // Get current state
+        let current_symlinks = get_current_symlinks(claude_skills_dir);
+        let current_names: HashSet<String> = current_symlinks.keys().cloned().collect();
+
+        // Determine requested skills
+        let requested_names: HashSet<String> = if skill_list.is_empty() {
+            get_all_skill_names(config)
+        } else {
+            skill_list.iter().cloned().collect()
+        };
+
+        // Compute diff
+        let to_remove: HashSet<_> = current_names.difference(&requested_names).cloned().collect();
+        let to_add: HashSet<_> = requested_names.difference(&current_names).cloned().collect();
+        let unchanged: HashSet<_> = current_names.intersection(&requested_names).cloned().collect();
+
+        let mut result = SyncResult {
+            unchanged: unchanged.into_iter().collect(),
+            ..Default::default()
+        };
+
+        // Remove symlinks that shouldn't be there
+        for name in &to_remove {
+            let symlink_path = claude_skills_dir.join(name);
+            if let Err(e) = fs::remove_file(&symlink_path) {
+                log::warn!("Failed to remove symlink {}: {}", symlink_path.display(), e);
+            } else {
+                result.removed.push(name.clone());
+            }
+        }
+
+        // Add symlinks that should be there
+        for name in &to_add {
+            if let Some(source_path) = find_skill_source(name, config) {
+                let symlink_path = claude_skills_dir.join(name);
+                if let Err(e) = unix_fs::symlink(&source_path, &symlink_path) {
+                    log::warn!(
+                        "Failed to create symlink {} -> {}: {}",
+                        symlink_path.display(),
+                        source_path.display(),
+                        e
+                    );
+                } else {
+                    result.added.push(name.clone());
+                }
+            } else {
+                result.not_found.push(name.clone());
+            }
+        }
+
+        // Sort for consistent output
+        result.added.sort();
+        result.removed.sort();
+        result.unchanged.sort();
+        result.not_found.sort();
+
+        Ok(result)
     }
 }

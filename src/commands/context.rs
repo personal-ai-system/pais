@@ -13,8 +13,9 @@
 //!
 //! ## Skill Filtering
 //!
-//! If PAIS_SKILLS environment variable is set (comma-separated list of skill names),
-//! only those skills will be loaded. If empty or unset, all skills are loaded.
+//! Skills are filtered based on what symlinks exist in `~/.claude/skills/`.
+//! This is set up by `pais session` before Claude Code launches.
+//! If no symlinks exist, all skills from the PAIS skills directory are shown.
 
 use eyre::{Context, Result};
 use std::collections::HashSet;
@@ -57,12 +58,26 @@ fn extract_skill_body(content: &str) -> Option<String> {
     None
 }
 
-/// Read the skill filter from PAIS_SKILLS environment variable
+/// Read the skill filter from ~/.claude/skills/ symlinks
+///
+/// Returns Some(set of skill names) if symlinks exist, None if directory
+/// doesn't exist or is empty (meaning no filtering - load all skills).
 fn get_skill_filter() -> Option<HashSet<String>> {
-    std::env::var("PAIS_SKILLS")
-        .ok()
-        .filter(|s| !s.is_empty())
-        .map(|s| s.split(',').map(|s| s.trim().to_string()).collect())
+    let home = dirs::home_dir()?;
+    let claude_skills_dir = home.join(".claude").join("skills");
+
+    if !claude_skills_dir.exists() {
+        return None;
+    }
+
+    let entries = fs::read_dir(&claude_skills_dir).ok()?;
+    let symlinks: HashSet<String> = entries
+        .flatten()
+        .filter(|e| e.path().is_symlink())
+        .filter_map(|e| e.file_name().to_str().map(String::from))
+        .collect();
+
+    if symlinks.is_empty() { None } else { Some(symlinks) }
 }
 
 /// Check if a skill should be included based on the filter
@@ -272,10 +287,10 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
 
     let context_path = skills_dir.join("context-snippet.md");
 
-    // Check for skill filter from environment
+    // Check for skill filter from ~/.claude/skills/ symlinks
     let skill_filter = get_skill_filter();
     if let Some(ref filter) = skill_filter {
-        log::info!("Skill filter active: {:?}", filter);
+        log::info!("Skill filter from symlinks: {} skills", filter.len());
     } else {
         log::debug!("No skill filter - loading all skills");
     }
@@ -470,29 +485,6 @@ mod tests {
         // Empty filter set means nothing matches
         assert!(!should_include_skill("rust-coder", &filter));
         assert!(!should_include_skill("anything", &filter));
-    }
-
-    #[test]
-    fn test_get_skill_filter_parsing() {
-        // Test the parsing logic directly
-        let env_value = "rust-coder,otto,fabric";
-        let filter: HashSet<String> = env_value.split(',').map(|s| s.trim().to_string()).collect();
-        assert_eq!(filter.len(), 3);
-        assert!(filter.contains("rust-coder"));
-        assert!(filter.contains("otto"));
-        assert!(filter.contains("fabric"));
-    }
-
-    #[test]
-    fn test_get_skill_filter_with_whitespace() {
-        // Test that whitespace is trimmed
-        let env_value = "rust-coder , otto , fabric";
-        let filter: HashSet<String> = env_value.split(',').map(|s| s.trim().to_string()).collect();
-        assert!(filter.contains("rust-coder"));
-        assert!(filter.contains("otto"));
-        assert!(filter.contains("fabric"));
-        // Should NOT contain untrimmed versions
-        assert!(!filter.contains(" otto "));
     }
 
     #[test]
