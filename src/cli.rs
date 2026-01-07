@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use std::io::IsTerminal;
 use std::path::PathBuf;
 
@@ -169,17 +169,25 @@ pub enum Commands {
         args: Vec<String>,
     },
 
-    /// Launch Claude Code with dynamic MCP configuration
+    /// Launch Claude Code with dynamic MCP and skill configuration
     Session {
-        /// MCP servers to load (comma-separated)
-        #[arg(short, long, value_delimiter = ',')]
+        /// MCP servers to load (repeatable: -m github -m slack)
+        #[arg(short = 'm', long, action = ArgAction::Append)]
         mcp: Option<Vec<String>>,
 
         /// Use a named MCP profile from pais.yaml
-        #[arg(short, long)]
-        profile: Option<String>,
+        #[arg(long)]
+        mcp_profile: Option<String>,
 
-        /// List available MCPs and profiles
+        /// Skills to load (repeatable: -s rust-coder -s otto)
+        #[arg(short = 's', long, action = ArgAction::Append)]
+        skill: Option<Vec<String>>,
+
+        /// Use a named skill profile from pais.yaml
+        #[arg(long)]
+        skill_profile: Option<String>,
+
+        /// List available MCPs, skills, and profiles
         #[arg(short, long)]
         list: bool,
 

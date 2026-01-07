@@ -12,6 +12,7 @@
 //!   - Full content loaded when skill is invoked
 
 use eyre::{Context, Result};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -20,6 +21,15 @@ use crate::cli::ContextAction;
 use crate::config::Config;
 use crate::skill::indexer::{SkillIndex, generate_index};
 use crate::skill::parser::SkillTier;
+
+/// Parse PAIS_SKILLS environment variable into a filter set
+/// Returns None if env var is not set or empty (meaning "load all skills")
+fn parse_skill_filter() -> Option<HashSet<String>> {
+    std::env::var("PAIS_SKILLS")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.split(',').map(|name| name.trim().to_string()).collect())
+}
 
 /// Run a context subcommand
 pub fn run(action: ContextAction, config: &Config) -> Result<()> {
@@ -182,9 +192,81 @@ fn generate_environment_context(config: &Config) -> Option<String> {
     Some(lines.join("\n"))
 }
 
+/// Filter deferred skills context to only include skills in the filter set
+///
+/// The context-snippet.md format has skills listed in a table format:
+/// | **skill-name** | Description... |
+///
+/// We filter to only include rows where the skill name is in the filter set.
+fn filter_deferred_skills_context(content: &str, filter: &HashSet<String>) -> String {
+    let mut result = Vec::new();
+    let mut in_table = false;
+    let mut header_lines: Vec<&str> = Vec::new();
+
+    for line in content.lines() {
+        // Detect table start (header row with "Skill" or "Name")
+        if line.contains('|') && (line.contains("Skill") || line.contains("Name")) && !in_table {
+            in_table = true;
+            header_lines.push(line);
+            continue;
+        }
+
+        // Table separator line (|---|---|)
+        if in_table && header_lines.len() == 1 && line.contains("---") {
+            header_lines.push(line);
+            continue;
+        }
+
+        // Process table data rows
+        if in_table && line.starts_with('|') {
+            // Extract skill name from the row (usually first column after |)
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() >= 2 {
+                // Get the skill name, stripping markdown bold markers
+                let skill_cell = parts[1].trim();
+                let skill_name = skill_cell.trim_start_matches("**").trim_end_matches("**").trim();
+
+                if filter.contains(skill_name) {
+                    // Include header lines if this is the first matching row
+                    if !header_lines.is_empty() {
+                        result.extend(header_lines.drain(..).map(String::from));
+                    }
+                    result.push(line.to_string());
+                }
+            }
+            continue;
+        }
+
+        // Non-table content: include section headers and other structural elements
+        if !in_table {
+            // Keep section headers, descriptions, and empty lines
+            if line.starts_with('#') || line.starts_with("##") || line.is_empty() {
+                result.push(line.to_string());
+            }
+        }
+
+        // End of table detection (empty line or new section)
+        if in_table && (line.is_empty() || line.starts_with('#')) {
+            in_table = false;
+            header_lines.clear();
+            if !line.is_empty() {
+                result.push(line.to_string());
+            }
+        }
+    }
+
+    result.join("\n")
+}
+
 /// Inject skill context for SessionStart hook
 fn inject_context(raw: bool, config: &Config) -> Result<()> {
     log::debug!("Injecting context (raw={})", raw);
+
+    // Check for skill filter from PAIS_SKILLS env var
+    let skill_filter = parse_skill_filter();
+    if let Some(ref filter) = skill_filter {
+        log::info!("Skill filter active: {:?}", filter);
+    }
 
     let skills_dir = Config::expand_path(&config.paths.skills);
     log::debug!("Skills directory: {}", skills_dir.display());
@@ -200,8 +282,16 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         index.deferred_count
     );
 
-    // Load all core-tier skills (Tier 0)
-    let core_skills = load_core_skills(&skills_dir, &index);
+    // Load core-tier skills (Tier 0), filtered if PAIS_SKILLS is set
+    let all_core_skills = load_core_skills(&skills_dir, &index);
+    let core_skills: Vec<(String, String)> = if let Some(ref filter) = skill_filter {
+        all_core_skills
+            .into_iter()
+            .filter(|(name, _)| filter.contains(name))
+            .collect()
+    } else {
+        all_core_skills
+    };
     log::debug!(
         "Loaded {} core skills: [{}]",
         core_skills.len(),
@@ -219,22 +309,32 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         if env_context.is_some() { "generated" } else { "none" }
     );
 
-    // Check if context file exists (Tier 1 - deferred skills)
+    // Load and filter deferred skills context (Tier 1)
     let context_content = if context_path.exists() {
         log::debug!("Loading deferred skills context from: {}", context_path.display());
-        Some(
-            fs::read_to_string(&context_path)
-                .with_context(|| format!("Failed to read context file: {}", context_path.display()))?,
-        )
+        let raw_content = fs::read_to_string(&context_path)
+            .with_context(|| format!("Failed to read context file: {}", context_path.display()))?;
+
+        // Filter deferred skills if PAIS_SKILLS is set
+        if let Some(ref filter) = skill_filter {
+            Some(filter_deferred_skills_context(&raw_content, filter))
+        } else {
+            Some(raw_content)
+        }
     } else {
         log::debug!("No deferred skills context file found");
         None
     };
 
     // If neither exists, warn and exit
-    if core_skills.is_empty() && context_content.is_none() {
-        log::warn!("No skills found - run 'pais skill index' first");
-        eprintln!("[PAIS] No skills found. Run 'pais skill index' first.");
+    if core_skills.is_empty() && context_content.as_ref().is_none_or(|c| c.is_empty()) {
+        if skill_filter.is_some() {
+            log::warn!("No skills matched the PAIS_SKILLS filter");
+            eprintln!("[PAIS] No skills matched the filter. Check PAIS_SKILLS env var.");
+        } else {
+            log::warn!("No skills found - run 'pais skill index' first");
+            eprintln!("[PAIS] No skills found. Run 'pais skill index' first.");
+        }
         return Ok(());
     }
 
@@ -259,10 +359,20 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         println!("PAIS CONTEXT (Auto-loaded at Session Start)");
         println!();
         println!("📅 Current Time: {}", get_local_timestamp());
-        println!(
-            "📦 Skills: {} total, {} core-tier",
-            index.total_skills, index.core_count
-        );
+
+        // Show skill count with filter info if active
+        if let Some(ref filter) = skill_filter {
+            println!(
+                "📦 Skills: {} loaded (filtered from {} total)",
+                filter.len(),
+                index.total_skills
+            );
+        } else {
+            println!(
+                "📦 Skills: {} total, {} core-tier",
+                index.total_skills, index.core_count
+            );
+        }
 
         // Environment context (if configured)
         if let Some(ref env) = env_context {
@@ -306,10 +416,14 @@ fn inject_context(raw: bool, config: &Config) -> Result<()> {
         println!();
         println!("</system-reminder>");
         println!();
-        println!(
-            "✅ PAIS context loaded ({} skills, {} core-tier)",
-            index.total_skills, index.core_count
-        );
+        if let Some(ref filter) = skill_filter {
+            println!("✅ PAIS context loaded ({} skills, filtered)", filter.len());
+        } else {
+            println!(
+                "✅ PAIS context loaded ({} skills, {} core-tier)",
+                index.total_skills, index.core_count
+            );
+        }
     }
 
     Ok(())

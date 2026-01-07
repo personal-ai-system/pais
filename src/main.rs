@@ -91,12 +91,30 @@ fn run(cli: Cli, config: Config) -> Result<()> {
         Commands::Run { plugin, action, args } => commands::run::run(&plugin, &action, &args, &config),
         Commands::Session {
             mcp,
-            profile,
+            mcp_profile,
+            skill,
+            skill_profile,
             list,
             dry_run,
             format,
             claude_args,
-        } => commands::session::run(mcp, profile, list, dry_run, format, claude_args, &config),
+        } => {
+            let opts = commands::session::SessionOptions {
+                mcp: commands::session::McpOptions {
+                    servers: mcp,
+                    profile: mcp_profile,
+                },
+                skill: commands::session::SkillOptions {
+                    skills: skill,
+                    profile: skill_profile,
+                },
+                list,
+                dry_run,
+                format,
+                claude_args,
+            };
+            commands::session::run(opts, &config)
+        }
         Commands::Status { format } => commands::status::run(cli::OutputFormat::resolve(format), &config),
         Commands::Sync { dry_run, clean } => commands::sync::run(dry_run, clean, &config),
         Commands::Upgrade { dry_run, status } => commands::upgrade::run(dry_run, status, &config),
